@@ -14,9 +14,16 @@ done
 LATEST=${BUILD_VERSIONS[$(( ${#BUILD_VERSIONS[*]} - 1 ))]}
 LATEST_LTS=${LTS_VERSIONS[$(( ${#LTS_VERSIONS[*]} - 1 ))]}
 
+exit_on_int(){
+  exit 0
+}
+
+trap 'exit_on_int' SIGINT
+
 for NODE_VERSION in "${BUILD_VERSIONS[@]}"; do
   unset TAGS
   unset TAGSTRING
+  echo "Building node v$NODE_VERSION"
   TAGS+=("$NODE_VERSION")
   if [ "$NODE_VERSION" = "$LATEST" ]; then
     TAGS+=("latest")
@@ -34,7 +41,15 @@ for NODE_VERSION in "${BUILD_VERSIONS[@]}"; do
     $TAGSTRING \
     .
 
-  # test both archs for image
+  docker build \
+    --platform linux/amd64,linux/arm64 \
+    --build-arg UBUNTU_RELEASE=$UBUNTU_RELEASE \
+    --build-arg NODE_VERSION=$NODE_VERSION \
+    --build-arg WITH_NPM=true \
+    $TAGSTRING-npm \
+    .
+
+  # test both archs
   docker run --platform=linux/amd64 -v ./test.js:/test.js nvitaterna/nodejs-distroless:${NODE_VERSION} test.js x64 1000 1000 node ${NODE_VERSION} || (echo "x64 for ${NODE_VERSION} failed" && exit 1)
   docker run --platform=linux/arm64 -v ./test.js:/test.js nvitaterna/nodejs-distroless:${NODE_VERSION} test.js arm64 1000 1000 node ${NODE_VERSION} || (echo "arm64 for ${NODE_VERSION} failed" && exit 1)
 

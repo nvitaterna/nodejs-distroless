@@ -1,4 +1,5 @@
 ARG UBUNTU_RELEASE=24.10
+ARG WITH_NPM=false
 
 FROM ubuntu:${UBUNTU_RELEASE} AS chisel-builder
 RUN apt-get update && apt-get install -y golang ca-certificates
@@ -28,18 +29,33 @@ FROM ubuntu:${UBUNTU_RELEASE} AS downloader
 RUN apt update -y && apt install -y wget xz-utils
 ARG NODE_VERSION
 ARG TARGETPLATFORM
+ARG WITH_NPM
 WORKDIR /download
+RUN mkdir usr
 RUN ARCH=$(echo $TARGETPLATFORM | grep -Po "\/.*" | tr -d "/" | awk '{sub(/amd/,"x")} 1') \
   && wget "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" \
-  && tar --strip-components=2 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz node-v${NODE_VERSION}-linux-${ARCH}/bin/node
+  && tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
+  -C ./usr/ \
+  node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
+  && bash -c "[[ \"$WITH_NPM\" == \"true\" ]]" \
+  &&  tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
+  -C ./usr/ \
+  node-v${NODE_VERSION}-linux-${ARCH}/bin/npm \
+  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/bin \
+  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/lib \
+  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/node_modules \
+  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/index.js \
+  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/package.json \
+  && sed -i -e 's/env node/node/' usr/lib/node_modules/npm/bin/npm-cli.js \
+  || true
 
 FROM scratch
 COPY --from=installer [ "/staging/", "/" ]
 COPY --from=downloader \
-  /download/node \
-  /usr/bin/
+  /download/usr \
+  /usr/
 COPY <<EOF /etc/passwd
-node:x:1000:1000:node:/home/node:/bin/bash
+node:x:1000:1000:node::
 EOF
 COPY <<EOF /etc/group
 node:x:1000:
