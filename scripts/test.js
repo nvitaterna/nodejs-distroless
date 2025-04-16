@@ -1,7 +1,11 @@
-const os = require("os");
-const assert = require("assert");
+const os = require('os');
+const assert = require('assert');
+const fs = require('fs');
+const spawn = require('child_process').spawn;
 
 // this is a simple test to ensure that a node script runs and that the arch/version match the expected inputs
+// this can be ran via:
+// node test.js $ARCH $UID $GID $USER $NODE_VERSION
 
 const arch = os.arch();
 const { gid, uid, username } = os.userInfo();
@@ -9,23 +13,23 @@ const version = process.versions.node;
 
 const entries = [
   {
-    key: "arch",
+    key: 'arch',
     value: arch,
   },
   {
-    key: "gid",
+    key: 'gid',
     value: gid,
   },
   {
-    key: "uid",
+    key: 'uid',
     value: uid,
   },
   {
-    key: "username",
+    key: 'username',
     value: username,
   },
   {
-    key: "version",
+    key: 'version',
     value: version,
   },
 ];
