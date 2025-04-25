@@ -19,9 +19,16 @@ jobs:
     steps:
       - name: Checkout to repository
         uses: actions/checkout@v4
+        with:
+          path: "./pr"
+      - name: Checkout to repository
+        uses: actions/checkout@v4
+        with:
+          ref: "refs/heads/main"
+          path: "./old"
       - name: Set matrix data
         id: set-matrix
-        run: echo "matrix=$(jq -c . < ./versions.json)" >> $GITHUB_OUTPUT
+        run: echo "matrix=$(jq -c '[inputs | select(. as $v | inputs | index($v) | not)]' ./old/versions.json ./pr/versions.json)" >> $GITHUB_OUTPUT
   build:
     needs: configure
     runs-on: ubuntu-latest
