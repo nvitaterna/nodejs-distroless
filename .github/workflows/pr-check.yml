@@ -28,7 +28,7 @@ jobs:
           path: "./old"
       - name: Set matrix data
         id: set-matrix
-        run: echo "matrix=$(jq -c '[inputs | select(. as $v | inputs | index($v) | not)]' ./old/versions.json ./pr/versions.json)" >> $GITHUB_OUTPUT
+        run: echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1])' pr/versions.json old/versions.json)" >> $GITHUB_OUTPUT
   build:
     needs: configure
     runs-on: ubuntu-latest
