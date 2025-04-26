@@ -47,7 +47,7 @@ FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 # combine the rootfs from chisel along with the rootfs from the compiled node stages
 # add node user, set uesr to node, and set workdir to home dir
 FROM nvitaterna/chisel-nodejs-base:latest
-COPY --link --from=compiled \
+COPY --from=compiled \
   /download/rootfs/ \
   /
 WORKDIR /home
