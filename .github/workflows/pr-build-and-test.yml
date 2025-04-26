@@ -94,7 +94,6 @@ jobs:
         with:
           load: true
           build-args: |
-            UBUNTU_RELEASE=24.10
             NODE_VERSION=${{ matrix.version.version }}
           push: false
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
