@@ -57,6 +57,7 @@ jobs:
             exit 1
           fi
   build:
+    name: Build and test v${{matrix.version.version}} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
     runs-on: ubuntu-latest
     strategy:
