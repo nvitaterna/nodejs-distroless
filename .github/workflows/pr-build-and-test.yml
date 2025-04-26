@@ -20,7 +20,8 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      # set to output of new versions or all versions
+      matrix: ${{ steps.set-matrix-new-versions.outputs.matrix || steps.set-matrix-all-versions.outputs.matrix }}
     steps:
       - name: Get changed paths
         uses: dorny/paths-filter@v3
@@ -99,6 +100,5 @@ jobs:
         with:
           image: nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
           options: --rm
-          # run --version and it should match the matrix.version.version
           run: |
             docker run --rm nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}} --version | grep -q "v${{ matrix.version.version }}"
