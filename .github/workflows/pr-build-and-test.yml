@@ -104,7 +104,7 @@ jobs:
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}
       - uses: addnab/docker-run-action@v3
         with:
-          image: nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
+          image: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
           options: --rm
           run: |
-            docker run --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
+            --version | grep -q "v${{ matrix.version.version }}"
