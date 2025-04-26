@@ -2,11 +2,11 @@ name: Build, test, and publish new or changed versions
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - versions.json
-      - Dockerfile
+    # branches:
+    # - main
+    # paths:
+    #   - versions.json
+    #   - Dockerfile
 
 concurrency: production
 
@@ -19,6 +19,7 @@ jobs:
       # set to output of new versions or all versions
       matrix: ${{ steps.set-matrix-new-versions.outputs.matrix || steps.set-matrix-all-versions.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v4
       - name: Get changed paths
         uses: dorny/paths-filter@v3
         id: changes
