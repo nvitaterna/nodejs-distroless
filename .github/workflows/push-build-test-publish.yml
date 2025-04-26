@@ -31,19 +31,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: "./new"
-      - if: steps.changes.outputs.dockerfile == 'false'
-        name: Checkout base ref
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.before }}
-          path: "./old"
-      - if: steps.changes.outputs.dockerfile == 'false'
-        name: Set matrix data to new and changed versions
-        id: set-matrix-new-versions
-        run: |
-          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
-      - if: steps.changes.outputs.dockerfile == 'true'
-        name: Set matrix data to all versions
+      # - if: steps.changes.outputs.dockerfile == 'false'
+      #   name: Checkout base ref
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ref: ${{ github.event.before }}
+      #     path: "./old"
+      # - if: steps.changes.outputs.dockerfile == 'false'
+      #   name: Set matrix data to new and changed versions
+      #   id: set-matrix-new-versions
+      #   run: |
+      #     echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+      # - if: steps.changes.outputs.dockerfile == 'true'
+      - name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: |
           echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' < new/versions.json)" >> $GITHUB_OUTPUT
