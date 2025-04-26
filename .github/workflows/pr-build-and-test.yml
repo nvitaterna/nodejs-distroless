@@ -92,9 +92,9 @@ jobs:
         uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
         with:
           load: true
+          push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
-          push: false
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}},mode=max
           tags: |

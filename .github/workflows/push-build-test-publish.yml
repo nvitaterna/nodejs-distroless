@@ -23,6 +23,7 @@ jobs:
       matrix: ${{ steps.set-matrix-new-versions.outputs.matrix || steps.set-matrix-all-versions.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Get changed paths
         uses: dorny/paths-filter@v3
         id: changes
@@ -30,26 +31,31 @@ jobs:
           filters: |
             dockerfile:
               - 'Dockerfile'
+
       - name: Checkout current ref
         uses: actions/checkout@v4
         with:
           path: "./new"
+
       - if: steps.changes.outputs.dockerfile == 'false'
         name: Checkout base ref
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.before }}
           path: "./old"
+
       - if: steps.changes.outputs.dockerfile == 'false'
         name: Set matrix data to new and changed versions
         id: set-matrix-new-versions
         run: |
           echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+
       - if: steps.changes.outputs.dockerfile == 'true'
         name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: |
           echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' < new/versions.json)" >> $GITHUB_OUTPUT
+
       - name: Validate that either new or changed versions exist
         run: |
           if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "" ]]; then
@@ -95,6 +101,7 @@ jobs:
         uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
         with:
           load: true
+          push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
