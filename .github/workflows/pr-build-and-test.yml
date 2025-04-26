@@ -1,8 +1,5 @@
 name: Build and test new or changed versions
 
-description: |
-  This workflow only builds and tests Docker images for the new or changed versions in the json file.
-
 on:
   pull_request:
     types:
@@ -31,10 +28,10 @@ jobs:
           filters: |
             dockerfile:
               - 'Dockerfile'
-      - name: Checkout current PR ref
+      - name: Checkout current ref
         uses: actions/checkout@v4
         with:
-          path: "./pr"
+          path: "./new"
       - if: steps.changes.outputs.dockerfile == 'false'
         name: Checkout target ref
         uses: actions/checkout@v4
@@ -45,12 +42,12 @@ jobs:
         name: Set matrix data to new and changed versions
         id: set-matrix-new-versions
         run: |
-          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version })' pr/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version })' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
       - if: steps.changes.outputs.dockerfile == 'true'
         name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: |
-          echo "matrix=$(jq -c '. | map({ version: .version })' < pr/versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c '. | map({ version: .version })' < new/versions.json)" >> $GITHUB_OUTPUT
       - name: Validate that either new or changed versions exist
         run: |
           if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "[]" ]]; then

@@ -1,721 +1,721 @@
 [
   {
     "version": "23.11.0",
-    "isLts": false,
+    "lts": false,
     "latest": true,
     "major": 23,
     "current": true
   },
   {
     "version": "23.10.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.9.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.8.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.7.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.6.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.6.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.5.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.4.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.3.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.2.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.1.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "23.0.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.15.0",
-    "isLts": true,
+    "lts": true,
     "latest": false,
     "major": 22,
     "current": false
   },
   {
     "version": "22.14.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.13.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.13.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.12.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.11.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.10.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.9.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.8.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.7.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.6.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.5.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.5.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.4.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.4.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.3.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.2.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.1.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "22.0.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.19.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": 20,
     "current": false
   },
   {
     "version": "20.19.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.18.3",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.18.2",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.18.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.18.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.17.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.16.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.15.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.15.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.14.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.13.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.13.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.12.2",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.12.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.12.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.11.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.11.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.10.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.9.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.8.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.8.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.7.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.6.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.6.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.5.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.5.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.4.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.3.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.3.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.2.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.1.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "20.0.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.8",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": 18,
     "current": false
   },
   {
     "version": "18.20.7",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.6",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.5",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.4",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.3",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.2",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.20.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.19.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.19.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.18.2",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.18.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.18.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.17.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.17.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.16.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.16.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.15.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.14.2",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.14.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.14.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.13.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.12.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.12.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.11.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.10.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.9.1",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.9.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.8.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.7.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.6.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.5.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.4.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.3.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.2.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.1.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
   },
   {
     "version": "18.0.0",
-    "isLts": false,
+    "lts": false,
     "latest": false,
     "major": false,
     "current": false
