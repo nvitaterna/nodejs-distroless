@@ -106,4 +106,4 @@ jobs:
       - name: Test build Docker image
         id: test
         run: |
-          docker run --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
+          docker run --platform ${{ matrix.platform.platform }} --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
