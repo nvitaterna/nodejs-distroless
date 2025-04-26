@@ -101,4 +101,4 @@ jobs:
           options: --rm
           # run --version and it should match the matrix.version.version
           run: |
-            docker run --rm nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}} --version | grep -q "${{ matrix.version.version }}"
+            docker run --rm nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}} --version | grep -q "v${{ matrix.version.version }}"
