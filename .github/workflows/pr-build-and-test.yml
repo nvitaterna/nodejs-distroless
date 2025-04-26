@@ -106,5 +106,5 @@ jobs:
         with:
           image: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
           options: --rm
-          run: |
-            --version | grep -q "v${{ matrix.version.version }}"
+          shell: node
+          run: --version | grep -q "v${{ matrix.version.version }}"
