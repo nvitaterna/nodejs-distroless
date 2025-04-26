@@ -49,7 +49,7 @@ jobs:
           echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' < new/versions.json)" >> $GITHUB_OUTPUT
       - name: Validate that either new or changed versions exist
         run: |
-          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "[]" ]]; then
+          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "" ]]; then
             echo "No new or changed versions found."
             exit 1
           fi
@@ -99,14 +99,14 @@ jobs:
             NODE_VERSION=${{ matrix.version.version }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}-${{matrix.version.version}}
+          tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}:${{matrix.version.version}}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
       - name: Test Docker image
         run: |
-          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
+          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/${{ vars.REGISTRY_IMAGE }}:${{matrix.version.version}} --version | grep -q "v${{ matrix.version.version }}"
 
       - name: Export digest
         run: |

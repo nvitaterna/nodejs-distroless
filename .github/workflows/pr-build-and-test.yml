@@ -50,7 +50,7 @@ jobs:
           echo "matrix=$(jq -c '. | map({ version: .version })' < new/versions.json)" >> $GITHUB_OUTPUT
       - name: Validate that either new or changed versions exist
         run: |
-          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "[]" ]]; then
+          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "" ]]; then
             echo "No new or changed versions found."
             exit 1
           fi
