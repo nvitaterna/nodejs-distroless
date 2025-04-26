@@ -12,25 +12,41 @@ on:
       - synchronize
     paths:
       - versions.json
+      - Dockerfile
 
 jobs:
   configure:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Checkout current ref
+      - name: Get changed paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            dockerfile:
+              - 'Dockerfile'
+      - name: Checkout current PR ref
         uses: actions/checkout@v4
         with:
           path: "./pr"
-      - name: Checkout old ref
+      - if: steps.changes.outputs.dockerfile == 'false'
+        name: Checkout target ref
         uses: actions/checkout@v4
         with:
-          ref: "refs/heads/main"
+          ref: ${{ github.event.pull_request.base.ref }}
           path: "./old"
-      - name: Set matrix data
-        id: set-matrix
+      - if: steps.changes.outputs.dockerfile == 'false'
+        name: Set matrix data to new and changed versions
+        id: set-matrix-new-versions
         run: echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1])' pr/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+      - if: steps.changes.outputs.dockerfile == 'true'
+        name: Set matrix data to all versions
+        id: set-matrix-all-versions
+        run: echo "matrix=$(jq -c . < ./versions.json)" >> $GITHUB_OUTPUT
   build:
     needs: configure
     runs-on: ubuntu-latest
