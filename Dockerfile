@@ -1,6 +1,6 @@
 ARG UBUNTU_RELEASE=24.10
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
+ARG TARGETOS
+ARG TARGETARCH
 ARG XZUTILS_VERSION=5.6.2-2ubuntu0.2
 
 # set up node arch-specific stage requirements
