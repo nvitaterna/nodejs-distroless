@@ -1,0 +1,166 @@
+name: Build, test, and publish new or changed versions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - versions.json
+      - Dockerfile
+
+concurrency: production
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      # set to output of new versions or all versions
+      matrix: ${{ steps.set-matrix-new-versions.outputs.matrix || steps.set-matrix-all-versions.outputs.matrix }}
+    steps:
+      - name: Get changed paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            dockerfile:
+              - 'Dockerfile'
+      - name: Checkout current ref
+        uses: actions/checkout@v4
+        with:
+          path: "./new"
+      - if: steps.changes.outputs.dockerfile == 'false'
+        name: Checkout base ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.before }}
+          path: "./old"
+      - if: steps.changes.outputs.dockerfile == 'false'
+        name: Set matrix data to new and changed versions
+        id: set-matrix-new-versions
+        run: |
+          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+      - if: steps.changes.outputs.dockerfile == 'true'
+        name: Set matrix data to all versions
+        id: set-matrix-all-versions
+        run: |
+          echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' < new/versions.json)" >> $GITHUB_OUTPUT
+      - name: Validate that either new or changed versions exist
+        run: |
+          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "[]" ]]; then
+            echo "No new or changed versions found."
+            exit 1
+          fi
+
+  build:
+    name: Build and test v${{matrix.version.version}} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+    needs: configure
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: ${{ fromJson(needs.configure.outputs.matrix) }}
+        platform:
+          - os: linux
+            arch: arm64
+          - os: linux
+            arch: amd64
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
+        with:
+          images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
+        with:
+          load: true
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}-${{matrix.version.version}}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: digests-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+  push:
+    runs-on: ubuntu-latest
+    name: Push ${{ matrix.version.version }} to Docker Hub
+    needs:
+      - build
+      - configure
+    strategy:
+      matrix:
+        version: ${{ fromJson(needs.configure.outputs.matrix) }}
+    steps:
+      - name: Map version tags from matrix.version.tags array to output
+        id: map-tags
+        run: |
+          tags=$(echo '${{ matrix.version.tags }}' | jq '.tags | map(.) | join("\n")')
+          echo "tags=$tags" >> $GITHUB_OUTPUT
+
+      - name: Download digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.version.version }}-*
+          merge-multiple: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker meta with tags ${{ matrix.version.tags }}
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
+        with:
+          images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            ${{ steps.map-tags.outputs.tags }}
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect nvitaterna/${{ vars.REGISTRY_IMAGE }}:${{ matrix.version.version }}

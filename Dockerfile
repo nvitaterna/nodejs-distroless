@@ -1,64 +1,60 @@
 ARG UBUNTU_RELEASE=24.10
-ARG WITH_NPM=false
+ARG TARGETOS
+ARG TARGETARCH
+ARG XZUTILS_VERSION=5.6.2-2ubuntu0.2
 
-FROM ubuntu:${UBUNTU_RELEASE} AS chisel-builder
-RUN apt-get update && apt-get install -y golang ca-certificates
-RUN go install github.com/canonical/chisel/cmd/chisel@latest
-
-FROM ubuntu:${UBUNTU_RELEASE} AS chisel-installer
-RUN apt-get update && apt-get install -y ca-certificates
-COPY --from=chisel-builder /root/go/bin/chisel /usr/bin
-WORKDIR /rootfs
-RUN chisel cut --root /rootfs libc6_libs ca-certificates_data bash_bins
-
-FROM scratch AS chisel
-COPY --from=chisel-installer ["/rootfs", "/"]
-COPY --from=chisel-builder /root/go/bin/chisel /usr/bin/chisel
-
-FROM chisel AS installer
-ARG UBUNTU_RELEASE
-WORKDIR /staging
-SHELL ["/usr/bin/bash", "-c"]
-RUN chisel cut \
-  --release ubuntu-${UBUNTU_RELEASE} \
-  --root /staging/ \
-  ca-certificates_data \
-  libstdc++6_libs
-
-FROM ubuntu:${UBUNTU_RELEASE} AS downloader
-RUN apt update -y && apt install -y wget xz-utils
-ARG NODE_VERSION
-ARG TARGETPLATFORM
-ARG WITH_NPM
+# set up node arch-specific stage requirements
+FROM ubuntu:${UBUNTU_RELEASE} AS setup-pre-node
+ARG XZUTILS_VERSION
+RUN apt-get update \
+  -q \
+  && apt-get install \
+  -y \
+  --no-install-recommends \
+  xz-utils=${XZUTILS_VERSION}
 WORKDIR /download
-RUN mkdir usr
-RUN ARCH=$(echo $TARGETPLATFORM | grep -Po "\/.*" | tr -d "/" | awk '{sub(/amd/,"x")} 1') \
-  && wget "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" \
-  && tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
-  -C ./usr/ \
-  node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
-  && bash -c "[[ \"$WITH_NPM\" == \"true\" ]]" \
-  &&  tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
-  -C ./usr/ \
-  node-v${NODE_VERSION}-linux-${ARCH}/bin/npm \
-  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/bin \
-  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/lib \
-  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/node_modules \
-  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/index.js \
-  node-v${NODE_VERSION}-linux-${ARCH}/lib/node_modules/npm/package.json \
-  && sed -i -e 's/env node/node/' usr/lib/node_modules/npm/bin/npm-cli.js \
-  || true
+RUN mkdir -p /download/rootfs/usr
 
-FROM scratch
-COPY --from=installer [ "/staging/", "/" ]
-COPY --from=downloader \
-  /download/usr \
-  /usr/
+# node amd64/x64
+FROM setup-pre-node AS setup-node-linux-amd64
+ARG NODE_VERSION
+ENV ARCH=x64
+ADD "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" .
+RUN tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
+  -C ./rootfs/usr/ \
+  node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
+  node-v${NODE_VERSION}-linux-${ARCH}/LICENSE \
+  node-v${NODE_VERSION}-linux-${ARCH}/share 
+
+
+# node arm64/arm64
+FROM setup-pre-node AS setup-node-linux-arm64
+ARG NODE_VERSION
+ENV ARCH=arm64
+ADD "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" .
+RUN tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
+  -C ./rootfs/usr/ \
+  node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
+  node-v${NODE_VERSION}-linux-${ARCH}/LICENSE \
+  node-v${NODE_VERSION}-linux-${ARCH}/share 
+
+# cant seem to do --from=setup-node-${TARGETOS}-${TARGETARCH} so we rename the stage here
+FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
+
+# use the base chisel nodejs image that contains dependencies for the final image
+# combine the rootfs from chisel along with the rootfs from the compiled node stages
+# add node user, set uesr to node, and set workdir to home dir
+FROM nvitaterna/chisel-nodejs-base:latest
+COPY --link --from=compiled \
+  /download/rootfs/ \
+  /
+WORKDIR /home
 COPY <<EOF /etc/passwd
-node:x:1000:1000:node::
+node:x:1000:1000:node:/home/node:
 EOF
 COPY <<EOF /etc/group
 node:x:1000:
 EOF
 USER node
+WORKDIR /home/node
 ENTRYPOINT ["/usr/bin/node"]
