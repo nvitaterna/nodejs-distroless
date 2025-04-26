@@ -155,7 +155,7 @@ jobs:
       - name: Map version tags from matrix.version.tags array to output
         id: map-tags
         run: |
-          tags=$(echo '${{ matrix.version.tags }}' | jq '.tags | map(.) | join("\n")')
+          tags=$(echo '${{ toJSON(matrix.version.tags) }}' | jq '.tags | map(.) | join("\n")')
           echo "tags=$tags" >> $GITHUB_OUTPUT
 
       - name: Download digests
