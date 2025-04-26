@@ -22,6 +22,7 @@ jobs:
     outputs:
       # set to output of new versions or all versions
       matrix: ${{ steps.set-matrix-new-versions.outputs.matrix || steps.set-matrix-all-versions.outputs.matrix }}
+      safeRefName: ${{ steps.safeRefName.outputs.REF }}
     steps:
       - name: Get changed paths
         uses: dorny/paths-filter@v3
@@ -56,6 +57,12 @@ jobs:
             echo "No new or changed versions found."
             exit 1
           fi
+      - name: Get safe ref name
+        id: safeRefName
+        run: |
+          ref=${{github.ref}}
+          echo "REF=${ref//\//-}" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build and test v${{matrix.version.version}} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
@@ -69,12 +76,6 @@ jobs:
           - os: linux
             arch: amd64
     steps:
-      - name: Get safe ref name
-        id: safeRefName
-        run: |
-          ref=${{github.ref}}
-          echo "REF=${ref//\//-}" >> "$GITHUB_OUTPUT"
-
       - name: Check out the repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -100,11 +101,11 @@ jobs:
             NODE_VERSION=${{ matrix.version.version }}
           push: false
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{steps.safeRefName.outputs.REF}},mode=max
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}},mode=max
           tags: |
             nvitaterna/nodejs-distroless:${{ matrix.version.version }}
           cache-from: |
-            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{steps.safeRefName.outputs.REF}}
+            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}}
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
       - name: Test build Docker image
         id: test
