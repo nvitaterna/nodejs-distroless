@@ -105,7 +105,8 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/${{ vars.REGISTRY_IMAGE }}:${{ steps.build.outputs.digest }} --version | grep -q "v${{ matrix.version.version }}"
+          digest="${{ steps.build.outputs.digest }}"
+          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/${{ vars.REGISTRY_IMAGE }}:${digest#sha256:} --version | grep -q "v${{ matrix.version.version }}"
 
       - name: Export digest
         run: |
