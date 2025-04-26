@@ -48,6 +48,12 @@ jobs:
         name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: echo "matrix=$(jq -c . < pr/versions.json)" >> $GITHUB_OUTPUT
+      - name: Validate that either new or changed versions exist
+        run: |
+          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "[]" ]]; then
+            echo "No new or changed versions found."
+            exit 1
+          fi
   build:
     needs: configure
     runs-on: ubuntu-latest
@@ -92,7 +98,7 @@ jobs:
           platforms: ${{ matrix.platform.platform }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}},mode=max
           tags: |
-            nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
+            nvitaterna/nodejs-distroless:${{ matrix.version.version }}
           cache-from: |
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}
@@ -101,4 +107,4 @@ jobs:
           image: nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
           options: --rm
           run: |
-            docker run --rm nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}} --version | grep -q "v${{ matrix.version.version }}"
+            docker run --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
