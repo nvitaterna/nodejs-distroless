@@ -55,7 +55,8 @@ jobs:
           fi
 
   build:
-    name: Build and test v${{matrix.version.version}} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+    if: ${{ needs.configure.outputs.matrix != '[]' }}
+    name: Build and test v${{matrix.version.version || 'no-version'}} on ${{ matrix.platform.os || 'no-os' }}/${{ matrix.platform.arch || 'no-arch'}}
     needs: configure
     runs-on: ubuntu-latest
     strategy:
