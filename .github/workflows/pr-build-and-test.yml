@@ -63,10 +63,10 @@ jobs:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
         platform:
-          - platform: linux/amd64
-            pair: linux-amd64
-          - platform: linux/arm64
-            pair: linux-arm64
+          - os: linux
+            arch: arm64
+          - os: linux
+            arch: amd64
     steps:
       - name: Get safe ref name
         id: safeRefName
@@ -98,14 +98,14 @@ jobs:
             UBUNTU_RELEASE=24.10
             NODE_VERSION=${{ matrix.version.version }}
           push: false
-          platforms: ${{ matrix.platform.platform }}
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}},mode=max
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{steps.safeRefName.outputs.REF}},mode=max
           tags: |
             nvitaterna/nodejs-distroless:${{ matrix.version.version }}
           cache-from: |
-            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
-            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}
+            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{steps.safeRefName.outputs.REF}}
+            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
       - name: Test build Docker image
         id: test
         run: |
-          docker run --platform ${{ matrix.platform.platform }} --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
+          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
