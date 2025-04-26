@@ -98,6 +98,7 @@ jobs:
             NODE_VERSION=${{ matrix.version.version }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
+          tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
