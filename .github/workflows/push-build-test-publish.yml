@@ -103,6 +103,10 @@ jobs:
           cache-from: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
+      - name: Test Docker image
+        run: |
+          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/${{ vars.REGISTRY_IMAGE }}:${{ steps.build.outputs.digest }} --version | grep -q "v${{ matrix.version.version }}"
+
       - name: Export digest
         run: |
           mkdir -p ${{ runner.temp }}/digests
@@ -116,10 +120,6 @@ jobs:
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
-
-      - name: Test Docker image
-        run: |
-          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm ${{ steps.build.outputs.digest }} --version | grep -q "v${{ matrix.version.version }}"
   push:
     runs-on: ubuntu-latest
     name: Push ${{ matrix.version.version }} to Docker Hub
