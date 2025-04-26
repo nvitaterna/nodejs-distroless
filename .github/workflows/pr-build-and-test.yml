@@ -102,9 +102,7 @@ jobs:
           cache-from: |
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.pair }}
-      - uses: addnab/docker-run-action@v3
-        with:
-          image: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
-          options: --rm
-          shell: node
-          run: --version | grep -q "v${{ matrix.version.version }}"
+      - name: Test build Docker image
+        id: test
+        run: |
+          docker run --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
