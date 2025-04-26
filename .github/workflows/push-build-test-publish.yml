@@ -178,7 +178,8 @@ jobs:
           images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
           flavor: |
             latest=false
-          tags: ${{ matrix.version.tags }}
+          tags: |
+            ${{ matrix.version.tags }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
