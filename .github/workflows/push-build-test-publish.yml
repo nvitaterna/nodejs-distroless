@@ -158,12 +158,6 @@ jobs:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
     steps:
-      - name: Map version tags from matrix.version.tags array to output
-        id: map-tags
-        run: |
-          tags=$(echo '${{ toJSON(matrix.version.tags) }}' | jq -c '. | map("nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .)')
-          echo "tags=$tags" >> $GITHUB_OUTPUT
-
       - name: Download digests
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -180,5 +174,5 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< ${{ steps.map-tags.outputs.tags }}) \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t nvitaterna/${{ vars.REGISTRY_IMAGE }}" + .) | join(" ")' <<< ${{ toJSON(matrix.version.tags) }}) \
             $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
