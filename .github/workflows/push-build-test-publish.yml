@@ -174,5 +174,5 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .) | join(" ")' <<< '${{ toJSON(matrix.version.tags) }}') \
+          docker buildx imagetools create $(jq -cr '. | map("-t nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .) | join(" ")' <<< '${{ toJSON(matrix.version.tags) }}') \
             $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
