@@ -90,6 +90,8 @@ jobs:
         uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
         with:
           images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          labels: |
+            NODEJS_VERSION=${{ matrix.version.version }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
