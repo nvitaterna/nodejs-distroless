@@ -1,10 +1,10 @@
-ARG UBUNTU_RELEASE=24.10
+ARG UBUNTU_RELEASE="24.10"
+
+# todo - implement renovate bot string
+ARG XZUTILS_VERSION="5.6.2-2ubuntu0.2"
 
 ARG TARGETOS
-
 ARG TARGETARCH
-
-ARG XZUTILS_VERSION=5.6.2-2ubuntu0.2
 
 # set up node arch-specific stage requirements
 FROM ubuntu:${UBUNTU_RELEASE} AS setup-pre-node
@@ -48,7 +48,7 @@ FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 # combine the rootfs from chisel along with the rootfs from the compiled node stages
 # add node user, set uesr to node, and set workdir to home dir
 FROM nvitaterna/chisel-nodejs-base:latest
-COPY --link --from=compiled \
+COPY --from=compiled \
   /download/rootfs/ \
   /
 WORKDIR /home
