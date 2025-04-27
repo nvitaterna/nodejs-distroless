@@ -179,7 +179,7 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            ${{ matrix.version.tags }}
+            ${{ steps.map-tags.outputs.tags }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
