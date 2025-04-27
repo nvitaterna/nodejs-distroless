@@ -155,7 +155,7 @@ jobs:
       - name: Map version tags from matrix.version.tags array to output
         id: map-tags
         run: |
-          tags=$(echo '${{ toJSON(matrix.version.tags) }}' | jq '. | map(.) | join("\n")')
+          tags=$(echo '${{ toJSON(matrix.version.tags) }}' | jq '. | map("nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .)')
           echo "tags=$tags" >> $GITHUB_OUTPUT
 
       - name: Download digests
@@ -171,18 +171,8 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Docker meta with tags ${{ matrix.version.tags }}
-        id: meta
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
-        with:
-          images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
-          flavor: |
-            latest=false
-          tags: |
-            ${{ steps.map-tags.outputs.tags }}
-
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< ${{ steps.map-tags.outputs.tags }}) \
             $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
