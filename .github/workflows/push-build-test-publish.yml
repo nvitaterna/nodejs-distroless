@@ -2,11 +2,11 @@ name: Build, test, and publish new or changed versions
 
 on:
   push:
-    # branches:
-    #   - main
-    # paths:
-    #   - versions.json
-    #   - Dockerfile
+    branches:
+      - main
+    paths:
+      - versions.json
+      - Dockerfile
 
 concurrency: production
 
