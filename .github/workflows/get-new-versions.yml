@@ -21,25 +21,30 @@ jobs:
         run: |
           echo "versions=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' new.versions.json versions.json)" >> $GITHUB_OUTPUT
 
-      - name: Check if new versions exist
+      - name: Check if new versions exist and set output
+        id: check-versions
         run: |
           if [[ "${{ steps.set-versions.outputs.versions }}" == "" || "${{ steps.set-versions.outputs.versions }}" == "[]" ]]; then
             echo "No new versions found."
-            exit 0
+            echo "new_versions=false" >> $GITHUB_OUTPUT
           else
             echo "New versions found."
+            echo "new_versions=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Map versions output to comma-separated string
+        if: steps.check-versions.outputs.new_versions == 'true'
         id: set-versions-string
         run: |
           echo "versions=$(jq -r '. | map(.version) | join(", ")' <<< '${{ steps.set-versions.outputs.versions }}')" >> $GITHUB_OUTPUT
 
-      - name: Overwrite verisions.json with new.versions.json
+      - name: Overwrite versions.json with new.versions.json
+        if: steps.check-versions.outputs.new_versions == 'true'
         run: |
           mv new.versions.json versions.json
 
       - name: Create PR
+        if: steps.check-versions.outputs.new_versions == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.PAT }}
