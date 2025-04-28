@@ -22,19 +22,19 @@ jobs:
       safeRefName: ${{ steps.safeRefName.outputs.REF }}
     steps:
       - name: Get changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           filters: |
             dockerfile:
               - 'Dockerfile'
       - name: Checkout current ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           path: "./new"
       - if: steps.changes.outputs.dockerfile == 'false'
         name: Checkout target ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           path: "./old"
