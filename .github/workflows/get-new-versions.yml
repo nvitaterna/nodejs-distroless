@@ -33,7 +33,7 @@ jobs:
       - name: Map versions output to comma-separated string
         id: set-versions-string
         run: |
-          echo "versions=$(jq -r '. | map(.version) | join(",")' <<< "${{ steps.set-versions.outputs.versions }}")" >> $GITHUB_OUTPUT
+          echo "versions=$(jq -r '. | map(.version) | join(",")' <<< '${{ steps.set-versions.outputs.versions }}')" >> $GITHUB_OUTPUT
 
       - name: Overwrite verisions.json with new.versions.json
         run: |
@@ -44,9 +44,9 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           commit-message: |
-            "feat(node): add new version(s)"
+            "chore(node): add new version(s)"
             versions: ${{ steps.set-versions-string.outputs.versions }}
-          title: "feat(node): add new version(s)"
+          title: "chore(node): add new version(s)"
           body: |
             New version(s) added: ${{ steps.set-versions-string.outputs.versions }}
 
