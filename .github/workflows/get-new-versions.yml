@@ -33,7 +33,7 @@ jobs:
       - name: Map versions output to comma-separated string
         id: set-versions-string
         run: |
-          echo "versions=$(jq -r '. | map(.version) | join(",")' <<< '${{ steps.set-versions.outputs.versions }}')" >> $GITHUB_OUTPUT
+          echo "versions=$(jq -r '. | map(.version) | join(", ")' <<< '${{ steps.set-versions.outputs.versions }}')" >> $GITHUB_OUTPUT
 
       - name: Overwrite verisions.json with new.versions.json
         run: |
