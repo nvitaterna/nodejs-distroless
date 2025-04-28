@@ -1,12 +1,5 @@
 [
   {
-    "version": "23.11.0",
-    "lts": false,
-    "latest": true,
-    "major": 23,
-    "current": true
-  },
-  {
     "version": "23.10.0",
     "lts": false,
     "latest": false,
@@ -88,13 +81,6 @@
     "lts": false,
     "latest": false,
     "major": false,
-    "current": false
-  },
-  {
-    "version": "22.15.0",
-    "lts": true,
-    "latest": false,
-    "major": 22,
     "current": false
   },
   {
