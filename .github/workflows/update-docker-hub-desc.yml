@@ -1,0 +1,25 @@
+name: Build and publish to Docker Hub
+
+on:
+  push:
+    branches: main
+    paths:
+      - README.md
+
+concurrency: production
+
+jobs:
+  dockerHubDescription:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Docker Hub Description
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          short-description: ${{ github.event.repository.description }}
+          enable-url-completion: true
