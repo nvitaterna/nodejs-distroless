@@ -44,7 +44,7 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           commit-message: |
-            "chore(node): add new version(s)"
+            chore(node): add new version(s)
             versions: ${{ steps.set-versions-string.outputs.versions }}
           title: "chore(node): add new version(s)"
           body: |
