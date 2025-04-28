@@ -1,4 +1,4 @@
-ARG UBUNTU_TAG="24.10"
+ARG UBUNTU_TAG="oracular-20250225@sha256:aadf9a3f5eda81295050d13dabe851b26a67597e424a908f25a63f589dfed48f"
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -51,7 +51,7 @@ FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 # use the base chisel nodejs image that contains dependencies for the final image
 # combine the rootfs from chisel along with the rootfs from the compiled node stages
 # add node user, set uesr to node, and set workdir to home dir
-FROM nvitaterna/chisel-nodejs-base:latest
+FROM nvitaterna/chisel-nodejs-base:latest@sha256:eb8ced344033aa2746bc1fdd000e9595c7f1a7cf9558dad81be8ab77237af390
 COPY --from=compiled \
   /download/rootfs/ \
   /
