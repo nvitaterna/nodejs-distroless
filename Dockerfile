@@ -1,15 +1,19 @@
-ARG UBUNTU_RELEASE="24.10"
-
-# todo - implement renovate bot string
-ARG XZUTILS_VERSION="5.6.2-2ubuntu0.2"
+ARG UBUNTU_TAG="24.10"
 
 ARG TARGETOS
 ARG TARGETARCH
 
 # set up node arch-specific stage requirements
-FROM ubuntu:${UBUNTU_RELEASE} AS setup-pre-node
-ARG XZUTILS_VERSION
-RUN apt-get update \
+FROM ubuntu:${UBUNTU_TAG} AS setup-pre-node
+ARG TARGETARCH
+
+# renovate-apt-docker: arch=amd64 versioning=loose depName=xz-utils
+ARG XZUTILS_amd64_VERSION="5.6.2-2ubuntu0.2"
+# renovate-apt-docker: arch=arm64 versioning=loose depName=xz-utils
+ARG XZUTILS_arm64_VERSION="5.6.2-2ubuntu0.2"
+
+RUN XZUTILS_VERSION=$(eval "echo \$XZUTILS_${TARGETARCH}_VERSION") \
+  && apt-get update \
   -q \
   && apt-get install \
   -y \
