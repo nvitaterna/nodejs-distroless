@@ -1,4 +1,4 @@
-name: Build and test changed versions
+name: Publish changed versions
 
 on:
   push:

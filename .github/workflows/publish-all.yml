@@ -1,4 +1,4 @@
-name: Build and test all versions
+name: Publish all versions
 
 on:
   workflow_dispatch:
@@ -16,25 +16,13 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix-all-versions.outputs.matrix }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - name: Get changed paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
-        id: changes
-        with:
-          filters: |
-            dockerfile:
-              - 'Dockerfile'
-
       - name: Checkout current ref
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          path: "./new"
 
       - name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: |
-          echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] }) | reverse' < new/versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] }) | reverse' < versions.json)" >> $GITHUB_OUTPUT
 
       - name: Validate that either new or changed versions exist
         run: |
