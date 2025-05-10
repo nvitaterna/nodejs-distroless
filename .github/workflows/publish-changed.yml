@@ -58,7 +58,6 @@ jobs:
     needs: configure
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
         platform:
@@ -90,11 +89,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
 
-      - name: Build and export to docker
+      - name: Build and export to local tar
         uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
         with:
-          load: true
-          push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
@@ -102,10 +99,65 @@ jobs:
           tags: ${{ env.TEST_TAG }}
           cache-from: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+          outputs: |
+            type=docker,dest=${{ runner.temp }}/myimage.tar
+            type=docker
 
       - name: Test Docker image
         run: |
           docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm ${{ env.TEST_TAG }} --version | grep -q "v${{ matrix.version.version }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/myimage.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  push:
+    name: Push v${{matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }} to Docker Hub.
+    needs:
+      - configure
+      - build
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        version: ${{ fromJson(needs.configure.outputs.matrix) }}
+        platform:
+          - os: linux
+            arch: arm64
+          - os: linux
+            arch: amd64
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}
+
+      - name: Load image
+        run: |
+          docker load --input ${{ runner.temp }}/myimage.tar
+          docker image ls -a
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
+        with:
+          images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          labels: |
+            NODEJS_VERSION=${{ matrix.version.version }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
 
       - name: Build and push by digest
         id: build
@@ -135,10 +187,12 @@ jobs:
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
-  push:
+
+  push-tags:
     runs-on: ubuntu-latest
-    name: Push ${{ matrix.version.version }} to Docker Hub
+    name: Push ${{ matrix.version.version }} tags to Docker Hub
     needs:
+      - push
       - build
       - configure
     strategy:
