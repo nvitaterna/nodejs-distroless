@@ -34,7 +34,7 @@ jobs:
       - name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: |
-          echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' < new/versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] }) | reverse' < new/versions.json)" >> $GITHUB_OUTPUT
 
       - name: Validate that either new or changed versions exist
         run: |
@@ -48,6 +48,7 @@ jobs:
     needs: configure
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
         platform:
