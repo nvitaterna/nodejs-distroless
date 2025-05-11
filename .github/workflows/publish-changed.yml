@@ -58,7 +58,6 @@ jobs:
     needs: configure
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
         platform:
@@ -142,6 +141,7 @@ jobs:
       - build
       - configure
     strategy:
+      max-parallel: 1
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
     steps:
