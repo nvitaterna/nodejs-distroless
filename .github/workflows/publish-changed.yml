@@ -14,7 +14,7 @@ env:
 
 jobs:
   configure:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       pull-requests: read
     outputs:
@@ -48,7 +48,7 @@ jobs:
 
       - name: Validate that either new or changed versions exist
         run: |
-          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" || "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]") ]]; then
+          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" || "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" ]]; then
             echo "No new or changed versions found."
             exit 1
           fi
@@ -56,7 +56,7 @@ jobs:
   build:
     name: Build and test v${{matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
@@ -135,7 +135,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
   push:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Push ${{ matrix.version.version }} to Docker Hub
     needs:
       - build

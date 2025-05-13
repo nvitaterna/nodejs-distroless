@@ -13,7 +13,7 @@ on:
 
 jobs:
   configure:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       pull-requests: read
     outputs:
@@ -63,7 +63,7 @@ jobs:
   build:
     name: Build and test v${{matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
