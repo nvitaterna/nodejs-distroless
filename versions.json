@@ -1,471 +1,459 @@
 [
   {
     "version": "24.0.1",
-    "lts": false,
-    "latest": true,
-    "major": 24,
-    "current": true
+    "tags": [
+      "24.0.1",
+      "24",
+      "latest",
+      "24.0"
+    ]
   },
   {
     "version": "24.0.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "24.0.0"
+    ]
   },
   {
     "version": "23.11.0",
-    "lts": false,
-    "latest": false,
-    "major": 23,
-    "current": false
+    "tags": [
+      "23.11.0",
+      "23",
+      "23.11"
+    ]
   },
   {
     "version": "23.10.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.10.0",
+      "23.10"
+    ]
   },
   {
     "version": "23.9.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.9.0",
+      "23.9"
+    ]
   },
   {
     "version": "23.8.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.8.0",
+      "23.8"
+    ]
   },
   {
     "version": "23.7.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.7.0",
+      "23.7"
+    ]
   },
   {
     "version": "23.6.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.6.1",
+      "23.6"
+    ]
   },
   {
     "version": "23.6.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.6.0"
+    ]
   },
   {
     "version": "23.5.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.5.0",
+      "23.5"
+    ]
   },
   {
     "version": "23.4.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.4.0",
+      "23.4"
+    ]
   },
   {
     "version": "23.3.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.3.0",
+      "23.3"
+    ]
   },
   {
     "version": "23.2.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.2.0",
+      "23.2"
+    ]
   },
   {
     "version": "23.1.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.1.0",
+      "23.1"
+    ]
   },
   {
     "version": "23.0.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "23.0.0",
+      "23.0"
+    ]
   },
   {
     "version": "22.15.0",
-    "lts": true,
-    "latest": false,
-    "major": 22,
-    "current": false
+    "tags": [
+      "22.15.0",
+      "22",
+      "lts",
+      "22.15"
+    ]
   },
   {
     "version": "22.14.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.14.0",
+      "22.14"
+    ]
   },
   {
     "version": "22.13.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.13.1",
+      "22.13"
+    ]
   },
   {
     "version": "22.13.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.13.0"
+    ]
   },
   {
     "version": "22.12.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.12.0",
+      "22.12"
+    ]
   },
   {
     "version": "22.11.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.11.0",
+      "22.11"
+    ]
   },
   {
     "version": "22.10.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.10.0",
+      "22.10"
+    ]
   },
   {
     "version": "22.9.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.9.0",
+      "22.9"
+    ]
   },
   {
     "version": "22.8.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.8.0",
+      "22.8"
+    ]
   },
   {
     "version": "22.7.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.7.0",
+      "22.7"
+    ]
   },
   {
     "version": "22.6.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.6.0",
+      "22.6"
+    ]
   },
   {
     "version": "22.5.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.5.1",
+      "22.5"
+    ]
   },
   {
     "version": "22.5.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.5.0"
+    ]
   },
   {
     "version": "22.4.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.4.1",
+      "22.4"
+    ]
   },
   {
     "version": "22.4.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.4.0"
+    ]
   },
   {
     "version": "22.3.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.3.0",
+      "22.3"
+    ]
   },
   {
     "version": "22.2.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.2.0",
+      "22.2"
+    ]
   },
   {
     "version": "22.1.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.1.0",
+      "22.1"
+    ]
   },
   {
     "version": "22.0.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "22.0.0",
+      "22.0"
+    ]
   },
   {
     "version": "20.19.1",
-    "lts": false,
-    "latest": false,
-    "major": 20,
-    "current": false
+    "tags": [
+      "20.19.1",
+      "20",
+      "20.19"
+    ]
   },
   {
     "version": "20.19.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.19.0"
+    ]
   },
   {
     "version": "20.18.3",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.18.3",
+      "20.18"
+    ]
   },
   {
     "version": "20.18.2",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.18.2"
+    ]
   },
   {
     "version": "20.18.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.18.1"
+    ]
   },
   {
     "version": "20.18.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.18.0"
+    ]
   },
   {
     "version": "20.17.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.17.0",
+      "20.17"
+    ]
   },
   {
     "version": "20.16.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.16.0",
+      "20.16"
+    ]
   },
   {
     "version": "20.15.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.15.1",
+      "20.15"
+    ]
   },
   {
     "version": "20.15.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.15.0"
+    ]
   },
   {
     "version": "20.14.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.14.0",
+      "20.14"
+    ]
   },
   {
     "version": "20.13.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.13.1",
+      "20.13"
+    ]
   },
   {
     "version": "20.13.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.13.0"
+    ]
   },
   {
     "version": "20.12.2",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.12.2",
+      "20.12"
+    ]
   },
   {
     "version": "20.12.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.12.1"
+    ]
   },
   {
     "version": "20.12.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.12.0"
+    ]
   },
   {
     "version": "20.11.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.11.1",
+      "20.11"
+    ]
   },
   {
     "version": "20.11.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.11.0"
+    ]
   },
   {
     "version": "20.10.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.10.0",
+      "20.10"
+    ]
   },
   {
     "version": "20.9.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.9.0",
+      "20.9"
+    ]
   },
   {
     "version": "20.8.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.8.1",
+      "20.8"
+    ]
   },
   {
     "version": "20.8.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.8.0"
+    ]
   },
   {
     "version": "20.7.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.7.0",
+      "20.7"
+    ]
   },
   {
     "version": "20.6.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.6.1",
+      "20.6"
+    ]
   },
   {
     "version": "20.6.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.6.0"
+    ]
   },
   {
     "version": "20.5.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.5.1",
+      "20.5"
+    ]
   },
   {
     "version": "20.5.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.5.0"
+    ]
   },
   {
     "version": "20.4.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.4.0",
+      "20.4"
+    ]
   },
   {
     "version": "20.3.1",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.3.1",
+      "20.3"
+    ]
   },
   {
     "version": "20.3.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.3.0"
+    ]
   },
   {
     "version": "20.2.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.2.0",
+      "20.2"
+    ]
   },
   {
     "version": "20.1.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.1.0",
+      "20.1"
+    ]
   },
   {
     "version": "20.0.0",
-    "lts": false,
-    "latest": false,
-    "major": false,
-    "current": false
+    "tags": [
+      "20.0.0",
+      "20.0"
+    ]
   }
 ]
