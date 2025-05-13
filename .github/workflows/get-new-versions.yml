@@ -19,7 +19,7 @@ jobs:
       - name: Compare versions
         id: set-versions
         run: |
-          echo "versions=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] })' new.versions.json versions.json)" >> $GITHUB_OUTPUT
+          echo "versions=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1])' new.versions.json versions.json)" >> $GITHUB_OUTPUT
 
       - name: Check if new versions exist and set output
         id: check-versions

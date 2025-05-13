@@ -22,7 +22,7 @@ jobs:
       - name: Set matrix data to all versions
         id: set-matrix-all-versions
         run: |
-          echo "matrix=$(jq -c '. | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] }) | reverse' < versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c '. | reverse' < versions.json)" >> $GITHUB_OUTPUT
 
       - name: Validate that either new or changed versions exist
         run: |
