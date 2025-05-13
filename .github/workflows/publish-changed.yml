@@ -44,11 +44,11 @@ jobs:
       - name: Set matrix data to new and changed versions
         id: set-matrix-new-versions
         run: |
-          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version, tags: [(to_entries | map(select(.value == true) | .key))[], .version] }) | reverse' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | reverse' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
 
       - name: Validate that either new or changed versions exist
         run: |
-          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" || "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]") ]]; then
+          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" || "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "[]" ]]; then
             echo "No new or changed versions found."
             exit 1
           fi
