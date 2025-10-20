@@ -51,7 +51,7 @@ FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 # use the base chisel nodejs image that contains dependencies for the final image
 # combine the rootfs from chisel along with the rootfs from the compiled node stages
 # add node user, set user to node, and set workdir to home dir
-FROM nvitaterna/chisel-nodejs-base:latest@sha256:370180d8ddf0bf011ba2ed0030fa511f021ebb7b6dcc9dcf11ddbe6ae640faf9
+FROM nvitaterna/chisel-nodejs-base:latest@sha256:e5873edf0336890a644d851abf519e9a4d22fd001c348fe8dbe8193b2550daa3
 COPY --from=compiled \
   /download/rootfs/ \
   /
