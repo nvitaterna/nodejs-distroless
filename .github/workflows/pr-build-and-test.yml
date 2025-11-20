@@ -29,12 +29,12 @@ jobs:
             dockerfile:
               - 'Dockerfile'
       - name: Checkout current ref
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
         with:
           path: "./new"
       - if: steps.changes.outputs.dockerfile == 'false'
         name: Checkout target ref
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           path: "./old"
@@ -74,7 +74,7 @@ jobs:
             arch: amd64
     steps:
       - name: Check out the repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
 
       - name: Login to Docker Hub
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
