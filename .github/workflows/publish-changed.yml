@@ -128,7 +128,7 @@ jobs:
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: digests-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           path: ${{ runner.temp }}/digests/*
@@ -146,7 +146,7 @@ jobs:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
     steps:
       - name: Download digests
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-${{ matrix.version.version }}-*
