@@ -17,7 +17,7 @@ jobs:
       matrix: ${{ steps.set-matrix-all-versions.outputs.matrix }}
     steps:
       - name: Checkout current ref
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set matrix data to all versions
         id: set-matrix-all-versions
@@ -45,7 +45,7 @@ jobs:
             arch: amd64
     steps:
       - name: Check out the repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Docker meta
         id: meta
