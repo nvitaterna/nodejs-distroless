@@ -81,18 +81,32 @@ jobs:
         run: |
           mv new.versions.json versions.json
 
-      # the publish workflow builds and tests each new version before pushing
-      # it, so commit straight to main instead of opening a PR
-      - name: Commit new versions
+      # open (or refresh) a pull request and let GitHub auto-merge it once the
+      # required checks pass: the PR workflow builds and smoke-tests the new
+      # version on both arches, so a broken upstream release never reaches
+      # main. The PAT is used so that the PR triggers workflows and the
+      # resulting merge triggers the publish workflow.
+      - name: Open an auto-merging pull request
         if: steps.check-versions.outputs.new_versions == 'true'
         env:
+          GH_TOKEN: ${{ secrets.PAT }}
           VERSIONS: ${{ steps.set-versions-string.outputs.versions }}
+          BRANCH: new-versions
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
           git add versions.json
           git commit -m "chore(node): add new version(s)" -m "versions: $VERSIONS"
-          git push
+          git push --force origin "$BRANCH"
+          if [[ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]]; then
+            gh pr create --head "$BRANCH" --base main \
+              --title "chore(node): add new version(s)" \
+              --body "New Node.js version(s): $VERSIONS. Opened by the hourly version check; merges on its own once the image builds pass."
+          else
+            gh pr edit "$BRANCH" --body "New Node.js version(s): $VERSIONS. Opened by the hourly version check; merges on its own once the image builds pass."
+          fi
+          gh pr merge "$BRANCH" --auto --squash
 
       # the node-dist release caches one tarball per version and arch (see
       # .github/actions/node-dist); drop the ones for versions that are no
