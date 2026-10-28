@@ -8,6 +8,8 @@ on:
 jobs:
   check_versions:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # delete assets from the node-dist release
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -90,3 +92,25 @@ jobs:
           git add versions.json
           git commit -m "chore(node): add new version(s)" -m "versions: $VERSIONS"
           git push
+
+      # the node-dist release caches one tarball per version and arch (see
+      # .github/actions/node-dist); drop the ones for versions that are no
+      # longer published so the release doesn't grow forever
+      - name: Prune cached tarballs of versions no longer published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if ! gh release view node-dist --json assets -q '.assets[].name' > assets.txt; then
+            echo "No node-dist release yet; nothing to prune."
+            exit 0
+          fi
+          jq -r '.[].version' versions.json > published.txt
+          while read -r asset; do
+            [[ "$asset" =~ ^node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-(x64|arm64)\.tar\.xz$ ]] || continue
+            version="${BASH_REMATCH[1]}"
+            if ! grep -qx "$version" published.txt; then
+              echo "Deleting $asset: $version is no longer published"
+              gh release delete-asset node-dist "$asset" --yes
+            fi
+          done < assets.txt
