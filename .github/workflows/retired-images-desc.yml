@@ -1,0 +1,28 @@
+name: Update retired image descriptions
+
+# one-off: the repos these images came from are archived, so their own
+# description workflows can no longer run; run this by hand when the
+# notes in docs/retired/ change
+on:
+  workflow_dispatch:
+
+jobs:
+  descriptions:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - chisel-nodejs-base
+          - nodejs-version-info
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Docker Hub Description
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: nvitaterna/${{ matrix.image }}
+          short-description: "Retired: now part of nvitaterna/nodejs-distroless"
+          readme-filepath: docs/retired/${{ matrix.image }}.md
