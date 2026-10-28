@@ -35,8 +35,6 @@ jobs:
     name: Build and test v${{matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     strategy:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
@@ -48,13 +46,6 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Fetch Node.js tarball
-        id: node-dist
-        uses: ./.github/actions/node-dist
-        with:
-          version: ${{ matrix.version.version }}
-          arch: ${{ matrix.platform.arch }}
 
       - name: Docker meta
         id: meta
@@ -83,7 +74,6 @@ jobs:
           push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
-            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.TEST_TAG }}
@@ -100,7 +90,6 @@ jobs:
         with:
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
-            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}
