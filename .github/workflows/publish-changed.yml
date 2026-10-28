@@ -44,7 +44,7 @@ jobs:
       - name: Set matrix data to new and changed versions
         id: set-matrix-new-versions
         run: |
-          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | reverse' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | reverse' new/versions.json old/versions.json)" >> "$GITHUB_OUTPUT"
 
       - name: Validate that either new or changed versions exist
         run: |
@@ -172,5 +172,6 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
+          # shellcheck disable=SC2046 # word splitting is intended: one -t per tag, one ref per digest
           docker buildx imagetools create $(jq -cr '. | map("-t nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .) | join(" ")' <<< '${{ toJSON(matrix.version.tags) }}') \
             $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
