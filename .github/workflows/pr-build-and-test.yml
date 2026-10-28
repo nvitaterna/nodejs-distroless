@@ -4,13 +4,14 @@ on:
   pull_request:
     types:
       - opened
+      - edited
       - reopened
       - synchronize
     paths:
       - versions.json
       - Dockerfile
 
-# cancel in-progress runs for the same PR when a new commit is pushed
+# cancel in-progress runs for the same PR when a newer run starts
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
