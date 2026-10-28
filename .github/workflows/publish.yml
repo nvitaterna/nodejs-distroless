@@ -1,0 +1,305 @@
+name: Publish
+
+# Publishes images whenever something that goes into them lands on main.
+# Which versions get (re)built:
+#   - the image definition changed since the last publish  -> every version
+#   - only versions.json changed                            -> new/changed versions
+#   - manual run with "all"                                  -> every version
+#   - manual run with "versions"                             -> just those
+# "Last publish" is the `published` tag, moved by the final job of each
+# successful full or incremental run, so a run that is skipped or fails is
+# caught up by the next one.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - versions.json
+      - test/**
+      - .github/workflows/publish.yml
+      - .github/actions/**
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Rebuild and publish every version
+        type: boolean
+        default: false
+      versions:
+        description: Comma-separated versions to publish (ignored when "all" is set)
+        type: string
+        default: ""
+
+# serialise publishes so a later run can't be overtaken by an earlier one
+concurrency: production
+
+env:
+  TEST_TAG: nvitaterna/${{ vars.REGISTRY_IMAGE }}:test
+
+jobs:
+  configure:
+    name: Pick versions to publish
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      # "all" or "changed" runs move the `published` tag at the end, "explicit" runs don't
+      mode: ${{ steps.set-matrix.outputs.mode }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set matrix data
+        id: set-matrix
+        env:
+          INPUT_ALL: ${{ inputs.all }}
+          INPUT_VERSIONS: ${{ inputs.versions }}
+        run: |
+          image_paths=(Dockerfile test .github/workflows/publish.yml .github/actions)
+          if [[ "$INPUT_ALL" == "true" ]]; then
+            mode=all
+          elif [[ -n "$INPUT_VERSIONS" ]]; then
+            mode=explicit
+          elif ! git rev-parse -q --verify 'published^{commit}' > /dev/null; then
+            echo "No 'published' tag yet: publishing every version"
+            mode=all
+          elif ! git diff --quiet published HEAD -- "${image_paths[@]}"; then
+            echo "Image definition changed since the last publish: publishing every version"
+            mode=all
+          else
+            mode=changed
+          fi
+
+          case "$mode" in
+            all)
+              matrix=$(jq -c '. | reverse' versions.json) ;;
+            explicit)
+              wanted=$(jq -c -n --arg v "$INPUT_VERSIONS" '$v | split(",") | map(gsub("^\\s+|\\s+$"; ""))')
+              matrix=$(jq -c --argjson wanted "$wanted" 'map(select(.version as $v | $wanted | index($v))) | reverse' versions.json) ;;
+            changed)
+              git show published:versions.json > old.versions.json
+              matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | reverse' versions.json old.versions.json) ;;
+          esac
+
+          if [[ "$matrix" == "[]" ]]; then
+            echo "Nothing to publish."
+            exit 1
+          fi
+          echo "Mode: $mode"
+          echo "Publishing: $(jq -r 'map(.version) | join(", ")' <<< "$matrix")"
+          {
+            echo "mode=$mode"
+            echo "matrix=$matrix"
+          } >> "$GITHUB_OUTPUT"
+
+  base:
+    name: Build base on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - os: linux
+            arch: arm64
+          - os: linux
+            arch: amd64
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      # built once per arch and handed to every version build as an OCI
+      # layout, so all versions in a run share the exact same base
+      - name: Build base
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          target: base
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          outputs: type=oci,tar=false,dest=${{ runner.temp }}/base-oci
+          cache-from: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+
+      - name: Upload base
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/base-oci
+          if-no-files-found: error
+          retention-days: 1
+
+  build:
+    name: Build and test v${{ matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+    needs:
+      - configure
+      - base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        version: ${{ fromJson(needs.configure.outputs.matrix) }}
+        platform:
+          - os: linux
+            arch: arm64
+          - os: linux
+            arch: amd64
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Fetch Node.js tarball
+        id: node-dist
+        uses: ./.github/actions/node-dist
+        with:
+          version: ${{ matrix.version.version }}
+          arch: ${{ matrix.platform.arch }}
+
+      - name: Download base
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/base-oci
+
+      - name: Resolve base
+        id: base
+        env:
+          BASE_OCI: ${{ runner.temp }}/base-oci
+        run: |
+          digest=$(jq -r '.manifests[0].digest' "$BASE_OCI/index.json")
+          echo "context=base=oci-layout://$BASE_OCI@$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dc80280dc8b3fe4e5f2f0d2dc80d7fd5f7466cd5 # v6
+        with:
+          images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          labels: |
+            NODEJS_VERSION=${{ matrix.version.version }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Build and export to docker
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          load: true
+          push: false
+          build-args: |
+            NODE_VERSION=${{ matrix.version.version }}
+            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
+          build-contexts: ${{ steps.base.outputs.context }}
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.TEST_TAG }}
+          cache-from: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+
+      - name: Test Docker image
+        env:
+          PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          EXPECTED_NODE_VERSION: ${{ matrix.version.version }}
+        run: |
+          docker run --platform "$PLATFORM" --rm \
+            -v "$PWD/test/check.js:/check.js:ro" \
+            -e EXPECTED_NODE_VERSION \
+            "$TEST_TAG" /check.js
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          build-args: |
+            NODE_VERSION=${{ matrix.version.version }}
+            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
+          build-contexts: ${{ steps.base.outputs.context }}
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          touch "${{ runner.temp }}/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: digests-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  push:
+    name: Push ${{ matrix.version.version }} to Docker Hub
+    needs:
+      - configure
+      - build
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        version: ${{ fromJson(needs.configure.outputs.matrix) }}
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.version.version }}-*
+          merge-multiple: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # shellcheck disable=SC2046 # word splitting is intended: one -t per tag, one ref per digest
+          docker buildx imagetools create $(jq -cr '. | map("-t nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .) | join(" ")' <<< '${{ toJSON(matrix.version.tags) }}') \
+            $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+  mark-published:
+    name: Mark commit as published
+    if: needs.configure.outputs.mode != 'explicit'
+    needs:
+      - configure
+      - push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # the next run diffs against this tag to find what still needs publishing
+      - name: Move the published tag
+        run: git push --force origin "HEAD:refs/tags/published"
