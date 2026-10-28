@@ -15,6 +15,17 @@
       "registryUrlTemplate": "{{#if (equals arch 'amd64')}}https://archive.ubuntu.com/ubuntu{{else}}https://ports.ubuntu.com/ubuntu-ports{{/if}}?suite=resolute&components=universe,multiverse,main,restricted&binaryArch={{arch}}",
       "datasourceTemplate": "deb",
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate-chisel:\\s*depName=(?<depName>.*?)?\\sARG .*?_VERSION=\"(?<currentValue>.*)\""
+      ],
+      "versioningTemplate": "loose",
+      "datasourceTemplate": "custom.github-branches"
     }
   ],
   "packageRules": [
@@ -27,6 +38,13 @@
         "ubuntu"
       ],
       "versioning": "ubuntu",
+      "allowedVersions": "/^\\d*[02468]\\.04$/"
+    },
+    {
+      "description": "Only use chisel releases for Ubuntu LTS versions",
+      "matchDepNames": [
+        "canonical-chisel-releases"
+      ],
       "allowedVersions": "/^\\d*[02468]\\.04$/"
     },
     {
@@ -55,5 +73,14 @@
       "groupName": "GitHub Actions"
     }
   ],
-  "platformAutomerge": false
+  "platformAutomerge": false,
+  "customDatasources": {
+    "github-branches": {
+      "defaultRegistryUrlTemplate": "https://api.github.com/repos/canonical/chisel-releases/branches",
+      "format": "json",
+      "transformTemplates": [
+        "{ \"releases\": $filter($, function($v) { name[$contains(\"ubuntu\")] }).$map($, function($v) { {\"version\":$v.name.$split('-')[1],\"sourceUrl\":$join([\"https://github.com/canonical/chisel-releases/tree/\",$v.name]),\"digest\":$v.commit.sha} } ),\"homepage\": \"https://github.com/canonical/chisel-releases\" }"
+      ]
+    }
+  }
 }
