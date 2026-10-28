@@ -10,6 +10,9 @@ on:
     paths:
       - versions.json
       - Dockerfile
+      - test/**
+      - .github/workflows/pr-build-and-test.yml
+      - .github/actions/**
 
 # cancel in-progress runs for the same PR when a newer run starts
 concurrency:
@@ -32,6 +35,9 @@ jobs:
           filters: |
             dockerfile:
               - 'Dockerfile'
+              - 'test/**'
+              - '.github/workflows/pr-build-and-test.yml'
+              - '.github/actions/**'
       - name: Checkout current ref
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -120,5 +126,12 @@ jobs:
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}}
             type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
       - name: Test Docker image
+        env:
+          PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          IMAGE: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
+          EXPECTED_NODE_VERSION: ${{ matrix.version.version }}
         run: |
-          docker run --platform ${{ matrix.platform.os }}/${{ matrix.platform.arch }} --rm nvitaterna/nodejs-distroless:${{ matrix.version.version }} --version | grep -q "v${{ matrix.version.version }}"
+          docker run --platform "$PLATFORM" --rm \
+            -v "$PWD/test/check.js:/check.js:ro" \
+            -e EXPECTED_NODE_VERSION \
+            "$IMAGE" /check.js
