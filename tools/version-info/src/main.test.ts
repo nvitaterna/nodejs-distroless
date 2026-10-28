@@ -3,6 +3,7 @@ import { main } from './main.js';
 import { fetchVersions } from './version/fetch-versions.js';
 import { fetchSchedule } from './scheduled-version/fetch-schedule.js';
 import { ScheduledVersion } from './scheduled-version/scheduled-version.js';
+import { filterReleased } from './version/is-released.js';
 
 vi.mock('./version/fetch-versions.js', () => ({
   fetchVersions: vi.fn(),
@@ -13,13 +14,18 @@ vi.mock('./scheduled-version/fetch-schedule.js', () => ({
 vi.mock('./scheduled-version/scheduled-version.js', () => ({
   ScheduledVersion: vi.fn(),
 }));
+vi.mock('./version/is-released.js', () => ({
+  filterReleased: vi.fn(),
+}));
 vi.mock('./utils/utils.js', () => ({
+  isActive: vi.fn(() => true),
   isLts: vi.fn(),
   sortVersions: vi.fn(),
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(filterReleased).mockImplementation(async (versions) => versions);
 });
 
 describe('main', () => {
@@ -38,6 +44,7 @@ describe('main', () => {
 
     expect(fetchVersions).toHaveBeenCalled();
     expect(fetchSchedule).toHaveBeenCalled();
+    expect(filterReleased).toHaveBeenCalledWith(mockVersions);
     expect(ScheduledVersion).toHaveBeenCalledTimes(mockSchedule.length);
     expect(result).toEqual(expect.any(Array));
   });
@@ -69,6 +76,30 @@ describe('main', () => {
       mockSchedule[2],
       expect.any(Boolean),
       mockVersions,
+    );
+  });
+
+  it('should only hand released versions of active lines to ScheduledVersion', async () => {
+    const mockVersions = ['18.0.0', '19.0.0', '20.0.0', '20.1.0'];
+    const mockSchedule = [
+      { version: 18, start: '2022-10-25', end: '2024-04-30', lts: 'Active' },
+      { version: 20, start: '2024-10-25', end: '2026-04-30', lts: 'Active' },
+    ];
+
+    vi.mocked(fetchVersions).mockResolvedValue(mockVersions);
+    vi.mocked(fetchSchedule).mockResolvedValue(mockSchedule);
+    vi.mocked(filterReleased).mockImplementation(async (versions) =>
+      versions.filter((version) => version !== '20.1.0'),
+    );
+
+    await main();
+
+    // 19 is not in the schedule, so it is never checked
+    expect(filterReleased).toHaveBeenCalledWith(['18.0.0', '20.0.0', '20.1.0']);
+    expect(ScheduledVersion).toHaveBeenCalledWith(
+      mockSchedule[1],
+      expect.any(Boolean),
+      ['18.0.0', '20.0.0'],
     );
   });
 });

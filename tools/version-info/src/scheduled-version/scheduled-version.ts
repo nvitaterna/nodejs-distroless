@@ -1,6 +1,6 @@
 import { major, minor } from 'semver';
 import { ScheduleItem } from './schedule.schema.js';
-import { getNowMilli, getTimeMilli, sortVersions } from '../utils/utils.js';
+import { isActive, sortVersions } from '../utils/utils.js';
 
 export class ScheduledVersion {
   readonly versions: string[];
@@ -22,7 +22,7 @@ export class ScheduledVersion {
 
     this.isLatest = versions.sort(sortVersions)[0] === this.versions[0];
 
-    this.isActive = getTimeMilli(scheduleItem.end) > getNowMilli();
+    this.isActive = isActive(scheduleItem);
   }
 
   public mapVersionList() {

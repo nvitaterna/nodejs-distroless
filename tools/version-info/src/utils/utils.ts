@@ -38,3 +38,7 @@ export const isLts = (scheduleItem: ScheduleItem) => {
 
   return true;
 };
+
+export const isActive = (scheduleItem: ScheduleItem) => {
+  return getTimeMilli(scheduleItem.end) > getNowMilli();
+};

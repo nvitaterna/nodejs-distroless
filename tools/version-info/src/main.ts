@@ -1,13 +1,25 @@
 import { fetchVersions } from './version/fetch-versions.js';
+import { filterReleased } from './version/is-released.js';
 import { fetchSchedule } from './scheduled-version/fetch-schedule.js';
 import { ScheduledVersion } from './scheduled-version/scheduled-version.js';
-import { isLts, sortVersions } from './utils/utils.js';
+import { isActive, isLts, sortVersions } from './utils/utils.js';
+import { major } from 'semver';
 
 export const main = async () => {
-  const [versions, schedule] = await Promise.all([
+  const [allVersions, schedule] = await Promise.all([
     fetchVersions(),
     fetchSchedule(),
   ]);
+
+  // Only versions of lines still in the schedule are published, so only those
+  // need the (one request per version) release check.
+  const activeMajors = new Set(
+    schedule.filter(isActive).map((item) => item.version),
+  );
+
+  const versions = await filterReleased(
+    allVersions.filter((version) => activeMajors.has(major(version))),
+  );
 
   return schedule
     .map((scheduleItem) => {

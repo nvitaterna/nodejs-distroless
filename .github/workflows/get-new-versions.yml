@@ -39,6 +39,23 @@ jobs:
         run: |
           echo "versions=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1])' new.versions.json versions.json)" >> "$GITHUB_OUTPUT"
 
+      # nodejs.org's listing is served from a CDN cache, so a run can see an
+      # older listing than the previous one did. Versions only legitimately
+      # disappear when their whole line reaches end of life.
+      - name: Refuse to drop versions of a line that is still published
+        run: |
+          dropped=$(jq -c -n '
+            [inputs] as $files
+            | ($files[0] | map(.version)) as $new
+            | ($files[1] | map(.version)) as $old
+            | ($new | map(split(".")[0]) | unique) as $lines
+            | ($old - $new) | map(select(split(".")[0] as $line | $lines | index($line)))
+          ' new.versions.json versions.json)
+          if [[ "$dropped" != "[]" ]]; then
+            echo "::error::Versions missing from nodejs.org's index: $dropped. Stale listing? Not committing."
+            exit 1
+          fi
+
       - name: Check if new versions exist and set output
         id: check-versions
         run: |
