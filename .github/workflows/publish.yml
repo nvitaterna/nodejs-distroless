@@ -147,6 +147,8 @@ jobs:
     permissions:
       contents: write
     strategy:
+      # one broken version must not stop the others from being published
+      fail-fast: false
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
         platform:
@@ -258,6 +260,9 @@ jobs:
 
   push:
     name: Push ${{ matrix.version.version }} to Docker Hub
+    # runs even when some builds failed: versions whose builds all passed
+    # are published, the others are skipped and the run stays red
+    if: ${{ !cancelled() && needs.configure.result == 'success' }}
     needs:
       - configure
       - build
@@ -274,13 +279,27 @@ jobs:
           pattern: digests-${{ matrix.version.version }}-*
           merge-multiple: true
 
+      - name: Check that every arch was built
+        id: digests
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          VERSION: ${{ matrix.version.version }}
+        run: |
+          n=$(find . -maxdepth 1 -type f | wc -l)
+          if [[ "$n" -ne 2 ]]; then
+            echo "::warning::v$VERSION: only $n of 2 arch builds succeeded, not publishing it in this run"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Login to Docker Hub
+        if: steps.digests.outputs.skip != 'true'
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create manifest list and push
+        if: steps.digests.outputs.skip != 'true'
         working-directory: ${{ runner.temp }}/digests
         run: |
           # shellcheck disable=SC2046 # word splitting is intended: one -t per tag, one ref per digest
@@ -289,9 +308,12 @@ jobs:
 
   mark-published:
     name: Mark commit as published
-    if: needs.configure.outputs.mode != 'explicit'
+    # only when every version was built and pushed; otherwise the tag stays
+    # put and the next run rebuilds everything (quickly, from the cache)
+    if: ${{ needs.configure.outputs.mode != 'explicit' && needs.build.result == 'success' && needs.push.result == 'success' }}
     needs:
       - configure
+      - build
       - push
     runs-on: ubuntu-latest
     permissions:
