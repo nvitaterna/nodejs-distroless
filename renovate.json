@@ -28,6 +28,32 @@
       ],
       "versioning": "ubuntu",
       "allowedVersions": "/^\\d*[02468]\\.04$/"
+    },
+    {
+      "description": "Automerge non-major updates once all PR checks have passed; majors stay open for review",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Group non-major GitHub Actions updates into a single PR",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "groupName": "GitHub Actions"
     }
-  ]
+  ],
+  "platformAutomerge": false
 }
