@@ -1,5 +1,9 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // required since TypeScript 6; keeps dist/ flat instead of dist/src/
+    "rootDir": "src"
+  },
   "include": [
     "src/**/*.ts",
   ],
