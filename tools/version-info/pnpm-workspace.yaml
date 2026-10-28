@@ -1,3 +1,4 @@
-onlyBuiltDependencies:
-  - esbuild
-  - msw
+# dependencies allowed to run install scripts (pnpm 12 key; was onlyBuiltDependencies)
+allowBuilds:
+  esbuild: true
+  msw: true
