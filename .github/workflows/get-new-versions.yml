@@ -27,17 +27,6 @@ jobs:
           version: 10
           package_json_file: tools/version-info/package.json
 
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 24
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6
-        with:
-          version: 10
-          package_json_file: tools/version-info/package.json
-
       - name: Fetch new versions
         working-directory: tools/version-info
         run: |
