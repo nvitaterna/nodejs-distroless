@@ -1,0 +1,102 @@
+name: Fetch Node.js tarball
+description: >
+  Make the Node.js release tarball for a version/arch available from this
+  repo's "node-dist" GitHub release, so builds don't depend on nodejs.org.
+  Missing tarballs are fetched from npmmirror (falling back to nodejs.org),
+  verified against nodejs.org's SHASUMS256.txt and uploaded to the release.
+
+inputs:
+  version:
+    description: Node.js version, without the leading "v"
+    required: true
+  arch:
+    description: Docker architecture (amd64 or arm64)
+    required: true
+  token:
+    description: Token with contents:write to upload to the release cache
+    default: ${{ github.token }}
+
+outputs:
+  url:
+    description: Base URL to pass to the Dockerfile as NODE_DIST_URL
+    value: ${{ steps.fetch.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch, verify and cache Node.js tarball
+      id: fetch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+        VERSION: ${{ inputs.version }}
+        ARCH: ${{ inputs.arch }}
+        RELEASE_TAG: node-dist
+      run: |
+        set -euo pipefail
+
+        case "$ARCH" in
+          amd64) node_arch=x64 ;;
+          arm64) node_arch=arm64 ;;
+          *) echo "::error::Unsupported arch: $ARCH"; exit 1 ;;
+        esac
+        file="node-v${VERSION}-linux-${node_arch}.tar.xz"
+        release_url="https://github.com/${GH_REPO}/releases/download/${RELEASE_TAG}"
+        workdir="$(mktemp -d)"
+        cd "$workdir"
+
+        # nodejs.org's checksum list is the source of truth for every download
+        sha=$(curl -fsSL --retry 5 --retry-all-errors \
+          "https://nodejs.org/dist/v${VERSION}/SHASUMS256.txt" \
+          | awk -v f="$file" '$2 == f { print $1 }')
+        if [[ -z "$sha" ]]; then
+          echo "::error::No checksum for $file in nodejs.org SHASUMS256.txt"
+          exit 1
+        fi
+
+        # download $1 to $file, giving up on stalled transfers, and verify it
+        fetch() {
+          rm -f "$file"
+          curl -fSL --retry 3 --retry-all-errors \
+            --speed-limit 102400 --speed-time 30 \
+            -o "$file" "$1/$file" \
+            && echo "$sha  $file" | sha256sum -c --status
+        }
+
+        if fetch "$release_url"; then
+          echo "Using cached $file from the $RELEASE_TAG release"
+          echo "url=$release_url" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        source_url=""
+        for base in \
+          "https://registry.npmmirror.com/-/binary/node/v${VERSION}" \
+          "https://nodejs.org/dist/v${VERSION}"; do
+          if fetch "$base"; then
+            source_url="$base"
+            break
+          fi
+          echo "::warning::Could not fetch a valid $file from $base"
+        done
+        if [[ -z "$source_url" ]]; then
+          echo "::error::Could not fetch a valid $file from any source"
+          exit 1
+        fi
+        echo "Fetched and verified $file from $source_url"
+
+        # parallel jobs may race to create the release, so re-check on failure
+        gh release view "$RELEASE_TAG" > /dev/null 2>&1 \
+          || gh release create "$RELEASE_TAG" --prerelease --latest=false \
+               --title "Node.js tarball cache" \
+               --notes "Node.js release tarballs used by the image builds. Managed by .github/actions/node-dist; checksums are verified against nodejs.org." \
+          || gh release view "$RELEASE_TAG" > /dev/null
+
+        if gh release upload "$RELEASE_TAG" "$file" --clobber; then
+          echo "url=$release_url" >> "$GITHUB_OUTPUT"
+        else
+          # e.g. no write access on fork PRs: build straight from the source
+          echo "::warning::Could not upload $file to the $RELEASE_TAG release"
+          echo "url=$source_url" >> "$GITHUB_OUTPUT"
+        fi
