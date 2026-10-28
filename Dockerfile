@@ -1,4 +1,4 @@
-ARG UBUNTU_TAG="questing-20251029@sha256:5922638447b1e3ba114332c896a2c7288c876bb94adec923d70d58a17d2fec5e"
+ARG UBUNTU_TAG="26.04@sha256:0e73b71479e7bc5f006bca872e25c3cd680dc052a0116f90d63ae363537db0dd"
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -8,9 +8,9 @@ FROM ubuntu:${UBUNTU_TAG} AS setup-pre-node
 ARG TARGETARCH
 
 # renovate-apt-docker: arch=amd64 versioning=loose depName=xz-utils
-ARG XZUTILS_amd64_VERSION="5.8.1-1build2"
+ARG XZUTILS_amd64_VERSION="5.8.3-1ubuntu0.1"
 # renovate-apt-docker: arch=arm64 versioning=loose depName=xz-utils
-ARG XZUTILS_arm64_VERSION="5.8.1-1build2"
+ARG XZUTILS_arm64_VERSION="5.8.3-1ubuntu0.1"
 
 RUN XZUTILS_VERSION=$(eval "echo \$XZUTILS_${TARGETARCH}_VERSION") \
   && apt-get update \
@@ -61,7 +61,7 @@ FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 # use the base chisel nodejs image that contains dependencies for the final image
 # combine the rootfs from chisel along with the rootfs from the compiled node stages
 # add node user, set user to node, and set workdir to home dir
-FROM nvitaterna/chisel-nodejs-base:latest@sha256:e5873edf0336890a644d851abf519e9a4d22fd001c348fe8dbe8193b2550daa3
+FROM nvitaterna/chisel-nodejs-base:latest@sha256:c4f52e8c6bbccd5ea759e7f6de52e05d340469e74ef1e4184cac9ff215b2a975
 COPY --from=compiled \
   /download/rootfs/ \
   /

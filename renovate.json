@@ -12,9 +12,22 @@
       "matchStrings": [
         "#\\s*renovate-apt-docker:\\s*?(arch=(?<arch>.*?))?\\s*?(versioning=(?<versioning>.*?))?\\s*depName=(?<depName>.*?)?\\sARG .*?_VERSION=\"(?<currentValue>.*)\""
       ],
-      "registryUrlTemplate": "{{#if (equals arch 'amd64')}}https://archive.ubuntu.com/ubuntu{{else}}https://ports.ubuntu.com/ubuntu-ports{{/if}}?suite=oracular&components=universe,multiverse,main,restricted&binaryArch={{arch}}",
+      "registryUrlTemplate": "{{#if (equals arch 'amd64')}}https://archive.ubuntu.com/ubuntu{{else}}https://ports.ubuntu.com/ubuntu-ports{{/if}}?suite=resolute&components=universe,multiverse,main,restricted&binaryArch={{arch}}",
       "datasourceTemplate": "deb",
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Only use Ubuntu LTS releases (YY.04 with an even year), skip short-lived interim releases",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ubuntu"
+      ],
+      "versioning": "ubuntu",
+      "allowedVersions": "/^\\d*[02468]\\.04$/"
     }
   ]
 }
