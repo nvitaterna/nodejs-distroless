@@ -181,7 +181,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@dc80280dc8b3fe4e5f2f0d2dc80d7fd5f7466cd5 # v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
           labels: |
