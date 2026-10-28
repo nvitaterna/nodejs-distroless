@@ -1,7 +1,11 @@
 import { http, HttpResponse } from 'msw';
 import { NODEJS_SCHEDULE_URL } from '../../scheduled-version/fetch-schedule.js';
 import { mockRawScheduleItem } from './schedule-item.js';
-import { NODEJS_VERSIONS_URL } from '../../version/fetch-versions.js';
+import {
+  NODEJS_INDEX_URL,
+  REQUIRED_FILES,
+} from '../../version/fetch-versions.js';
+import { shasumsUrl } from '../../version/is-released.js';
 import { faker } from '@faker-js/faker';
 import {
   Schedule,
@@ -50,37 +54,46 @@ export const mockScheduleResponse = (input: Schedule = {}) => {
   });
 };
 
-export const mockVersionsResponse = (input: string[] = []) => {
-  return http.get(NODEJS_VERSIONS_URL, () => {
+/**
+ * nodejs.org's release index. Every version ships the files the image build
+ * needs unless `files` says otherwise for it.
+ */
+export const mockVersionsResponse = (
+  input: string[] = [],
+  files: Record<string, string[]> = {},
+  status = 200,
+) => {
+  return http.get(NODEJS_INDEX_URL, () => {
     const versions = input.length
       ? input
       : Array.from({ length: 10 }).map(() => {
           return faker.system.semver();
         });
 
-    // return list of href strings in the format <a href="v${version}/">v${version}/</a>
+    const index = versions.map((version) => ({
+      version: `v${version}`,
+      date: faker.date.past().toISOString().slice(0, 10),
+      files: files[version] ?? [...REQUIRED_FILES, 'win-x64', 'osx-arm64-tar'],
+    }));
 
-    const hrefs = versions.map((version) => {
-      return `<a href="v${version}/">v${version}/</a>`;
-    });
+    return HttpResponse.json(index, { status });
+  });
+};
 
-    // return html page
-    const html = `
-      <!DOCTYPE html>
-      <html lang="en">
-        <body>
-            ${hrefs.join('\n')}
-        </body>
-      </html>
-    `;
-
-    return HttpResponse.html(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
+/**
+ * SHASUMS256.txt exists for every version except those in `notReleased`.
+ */
+export const mockShasumsResponse = (notReleased: string[] = []) => {
+  return http.head(shasumsUrl(':version'), ({ params }) => {
+    const version = String(params.version).replace(/^v/, '');
+    return new HttpResponse(null, {
+      status: notReleased.includes(version) ? 404 : 200,
     });
   });
 };
 
-export const handlers = [mockScheduleResponse(), mockVersionsResponse()];
+export const handlers = [
+  mockScheduleResponse(),
+  mockVersionsResponse(),
+  mockShasumsResponse(),
+];

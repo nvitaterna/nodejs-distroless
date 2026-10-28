@@ -1,26 +1,38 @@
-import { load } from 'cheerio';
+import { z } from 'zod';
 
 export const NODEJS_VERSIONS_URL = 'https://nodejs.org/dist/';
+export const NODEJS_INDEX_URL = `${NODEJS_VERSIONS_URL}index.json`;
+
+/** The tarballs the image build needs. */
+export const REQUIRED_FILES = ['linux-x64', 'linux-arm64'];
+
+const indexSchema = z.array(
+  z.object({
+    version: z.string(),
+    files: z.array(z.string()),
+  }),
+);
 
 /**
- * @returns a list of node.js versions from the nodejs.org downloads page.
- * This only returns versions that are v10 or higher in the format "x.y.z".
+ * @returns a list of node.js versions from nodejs.org's release index.
+ * This only returns versions that are v1 or higher in the format "x.y.z" and
+ * that ship the tarballs the image build needs.
  */
 export const fetchVersions = async () => {
-  const response = await fetch(NODEJS_VERSIONS_URL);
+  const response = await fetch(NODEJS_INDEX_URL);
 
-  const $ = load(await response.text());
+  if (!response.ok) {
+    throw new Error(`GET ${NODEJS_INDEX_URL} failed: ${response.status}`);
+  }
 
-  const versions = Array.from($('a'))
-    .map((element) => {
-      return $(element).text();
+  const index = indexSchema.parse(await response.json());
+
+  return index
+    .filter((release) => {
+      return (
+        /^v[1-9]/.test(release.version) &&
+        REQUIRED_FILES.every((file) => release.files.includes(file))
+      );
     })
-    .filter((version) => {
-      return version.match(/^v[1-9].+?\/$/);
-    })
-    .map((version) => {
-      return version.replace('/', '').replace('v', '');
-    });
-
-  return versions;
+    .map((release) => release.version.replace(/^v/, ''));
 };

@@ -4,6 +4,8 @@
     "lib": [
       "es2023"
     ],
+    // TypeScript 6 no longer includes every @types package by default
+    "types": ["node"],
     "module": "node16",
     "target": "es2022",
     "strict": true,
