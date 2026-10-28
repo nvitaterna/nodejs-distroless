@@ -332,6 +332,10 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # GITHUB_TOKEN may not push a tag at a commit that touches workflow
+          # files ("refusing to allow a GitHub App to create or update workflow")
+          token: ${{ secrets.PAT }}
 
       # the next run diffs against this tag to find what still needs publishing
       - name: Move the published tag
