@@ -1,0 +1,79 @@
+name: Build and test Docker image
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+    paths:
+      - Dockerfile
+      - src/**
+      - package.json
+      - pnpm-lock.yaml
+      - tsconfig.json
+      - tsconfig.build.json
+      - pnpm-workspace.yaml
+      - eslint.config.mjs
+      - vitest.config.ts
+      - .github/workflows/pr-check.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Multiplatform build and test
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - platform: linux/amd64
+            pair: linux-amd64
+          - platform: linux/arm64
+            pair: linux-arm64
+    steps:
+      - name: Get safe ref name
+        id: safeRefName
+        run: |
+          ref=${{github.ref}}
+          echo "REF=${ref//\//-}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and typecheck
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Build
+        id: build
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        with:
+          push: false
+          platforms: ${{ matrix.platform.platform }}
+          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}},mode=max
+          cache-from: |
+            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{ matrix.platform.pair }}-${{steps.safeRefName.outputs.REF}}
+            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{ matrix.platform.pair }}

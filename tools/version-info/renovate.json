@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices"
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": [
+        "nvitaterna/nodejs-distroless"
+      ],
+      "versioning": "node"
+    },
+    {
+      "description": "Automerge non-major updates once all PR checks have passed; majors stay open for review",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Group non-major GitHub Actions updates into a single PR",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "groupName": "GitHub Actions"
+    }
+  ],
+  "platformAutomerge": false
+}
