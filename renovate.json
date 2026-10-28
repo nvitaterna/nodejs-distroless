@@ -16,5 +16,18 @@
       "datasourceTemplate": "deb",
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
+  ],
+  "packageRules": [
+    {
+      "description": "Only use Ubuntu LTS releases (YY.04 with an even year), skip short-lived interim releases",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ubuntu"
+      ],
+      "versioning": "ubuntu",
+      "allowedVersions": "/^\\d*[02468]\\.04$/"
+    }
   ]
 }
