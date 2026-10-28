@@ -32,7 +32,8 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm build
-          node dist > ../../new.versions.json
+          # versions.json: already-published versions are not re-checked against nodejs.org
+          node dist ../../versions.json > ../../new.versions.json
 
       - name: Compare versions
         id: set-versions

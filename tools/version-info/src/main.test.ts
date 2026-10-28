@@ -102,4 +102,26 @@ describe('main', () => {
       ['18.0.0', '20.0.0'],
     );
   });
+
+  it('should not re-check versions that are already known', async () => {
+    const mockVersions = ['20.0.0', '20.1.0', '20.2.0'];
+    const mockSchedule = [
+      { version: 20, start: '2024-10-25', end: '2026-04-30', lts: 'Active' },
+    ];
+
+    vi.mocked(fetchVersions).mockResolvedValue(mockVersions);
+    vi.mocked(fetchSchedule).mockResolvedValue(mockSchedule);
+    vi.mocked(filterReleased).mockImplementation(async (versions) =>
+      versions.filter((version) => version !== '20.2.0'),
+    );
+
+    await main(['20.0.0', '20.1.0']);
+
+    expect(filterReleased).toHaveBeenCalledWith(['20.2.0']);
+    expect(ScheduledVersion).toHaveBeenCalledWith(
+      mockSchedule[0],
+      expect.any(Boolean),
+      ['20.0.0', '20.1.0'],
+    );
+  });
 });
