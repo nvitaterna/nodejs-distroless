@@ -7,12 +7,6 @@ on:
       - edited
       - reopened
       - synchronize
-    paths:
-      - versions.json
-      - Dockerfile
-      - test/**
-      - .github/workflows/pr-build-and-test.yml
-      - .github/actions/**
 
 # cancel in-progress runs for the same PR when a newer run starts
 concurrency:
@@ -25,6 +19,8 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
+      # "true" when the PR touches nothing that goes into the images
+      skip: ${{ steps.changes.outputs.images != 'true' }}
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       safeRefName: ${{ steps.safeRefName.outputs.REF }}
     steps:
@@ -38,11 +34,19 @@ jobs:
               - 'test/**'
               - '.github/workflows/pr-build-and-test.yml'
               - '.github/actions/**'
+            images:
+              - 'versions.json'
+              - 'Dockerfile'
+              - 'test/**'
+              - '.github/workflows/pr-build-and-test.yml'
+              - '.github/actions/**'
       - name: Checkout current ref
+        if: steps.changes.outputs.images == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           path: "./new"
       - name: Checkout target ref
+        if: steps.changes.outputs.images == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.base.ref }}
@@ -51,6 +55,7 @@ jobs:
       # build the oldest and newest version of each major instead of every
       # version (the publish workflows still build every version they release)
       - name: Set matrix data
+        if: steps.changes.outputs.images == 'true'
         id: set-matrix
         env:
           DOCKERFILE_CHANGED: ${{ steps.changes.outputs.dockerfile }}
@@ -76,6 +81,7 @@ jobs:
   base:
     name: Build base on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
+    if: needs.configure.outputs.skip != 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -127,6 +133,7 @@ jobs:
     needs:
       - configure
       - base
+    if: needs.configure.outputs.skip != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -202,3 +209,25 @@ jobs:
             -v "$PWD/test/check.js:/check.js:ro" \
             -e EXPECTED_NODE_VERSION \
             "$IMAGE" /check.js
+
+  # one check with a fixed name that is always reported, so it can be a
+  # required status check: fails if any build failed, passes when there was
+  # nothing to build
+  images:
+    name: Images
+    needs:
+      - configure
+      - base
+      - build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "Job results: $RESULTS"
+          if jq -e 'any(. == "failure" or . == "cancelled")' <<< "$RESULTS" > /dev/null; then
+            echo "::error::A build job failed."
+            exit 1
+          fi
