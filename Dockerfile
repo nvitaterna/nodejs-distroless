@@ -22,12 +22,19 @@ RUN XZUTILS_VERSION=$(eval "echo \$XZUTILS_${TARGETARCH}_VERSION") \
 WORKDIR /download
 RUN mkdir -p /download/rootfs/usr
 
+# the tarball is checked against nodejs.org's checksums wherever it is downloaded from:
+# CI passes NODE_DIST_URL pointing at this repo's "node-dist" release cache
+# (see .github/actions/node-dist), local builds default to nodejs.org
+
 # node amd64/x64
 FROM setup-pre-node AS setup-node-linux-amd64
 ARG NODE_VERSION
+ARG NODE_DIST_URL="https://nodejs.org/dist/v${NODE_VERSION}"
 ENV ARCH=x64
-ADD "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" .
-RUN tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
+ADD "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt" .
+ADD "${NODE_DIST_URL}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" .
+RUN grep " node-v${NODE_VERSION}-linux-${ARCH}.tar.xz$" SHASUMS256.txt | sha256sum -c - \
+  && tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
   -C ./rootfs/usr/ \
   node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
   node-v${NODE_VERSION}-linux-${ARCH}/LICENSE \
@@ -37,9 +44,12 @@ RUN tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
 # node arm64/arm64
 FROM setup-pre-node AS setup-node-linux-arm64
 ARG NODE_VERSION
+ARG NODE_DIST_URL="https://nodejs.org/dist/v${NODE_VERSION}"
 ENV ARCH=arm64
-ADD "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" .
-RUN tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
+ADD "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt" .
+ADD "${NODE_DIST_URL}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz" .
+RUN grep " node-v${NODE_VERSION}-linux-${ARCH}.tar.xz$" SHASUMS256.txt | sha256sum -c - \
+  && tar --strip-components=1 -xf node-v${NODE_VERSION}-linux-${ARCH}.tar.xz \
   -C ./rootfs/usr/ \
   node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
   node-v${NODE_VERSION}-linux-${ARCH}/LICENSE \

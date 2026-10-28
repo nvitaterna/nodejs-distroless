@@ -22,8 +22,7 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      # set to output of new versions or all versions
-      matrix: ${{ steps.set-matrix-new-versions.outputs.matrix || steps.set-matrix-all-versions.outputs.matrix }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
       safeRefName: ${{ steps.safeRefName.outputs.REF }}
     steps:
       - name: Get changed paths
@@ -37,28 +36,31 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           path: "./new"
-      - if: steps.changes.outputs.dockerfile == 'false'
-        name: Checkout target ref
+      - name: Checkout target ref
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           path: "./old"
-      - if: steps.changes.outputs.dockerfile == 'false'
-        name: Set matrix data to new and changed versions
-        id: set-matrix-new-versions
+      # always build new and changed versions; when the Dockerfile changes also
+      # build the oldest and newest version of each major instead of every
+      # version (the publish workflows still build every version they release)
+      - name: Set matrix data
+        id: set-matrix
+        env:
+          DOCKERFILE_CHANGED: ${{ steps.changes.outputs.dockerfile }}
         run: |
-          echo "matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map({ version: .version })' new/versions.json old/versions.json)" >> $GITHUB_OUTPUT
-      - if: steps.changes.outputs.dockerfile == 'true'
-        name: Set matrix data to all versions
-        id: set-matrix-all-versions
-        run: |
-          echo "matrix=$(jq -c '. | map({ version: .version })' < new/versions.json)" >> $GITHUB_OUTPUT
-      - name: Validate that either new or changed versions exist
-        run: |
-          if [[ "${{ steps.set-matrix-new-versions.outputs.matrix }}" == "" && "${{ steps.set-matrix-all-versions.outputs.matrix }}" == "" ]]; then
+          changed=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | map(.version)' new/versions.json old/versions.json)
+          sample='[]'
+          if [[ "$DOCKERFILE_CHANGED" == "true" ]]; then
+            sample=$(jq -c 'map(.version) | group_by(split(".")[0] | tonumber) | map(sort_by(split(".") | map(tonumber)) | [first, last]) | flatten' new/versions.json)
+          fi
+          matrix=$(jq -c -n --argjson changed "$changed" --argjson sample "$sample" '$changed + $sample | unique | map({ version: . })')
+          if [[ "$matrix" == "[]" ]]; then
             echo "No new or changed versions found."
             exit 1
           fi
+          echo "Building: $(jq -r 'map(.version) | join(", ")' <<< "$matrix")"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
       - name: Get safe ref name
         id: safeRefName
         run: |
@@ -69,6 +71,8 @@ jobs:
     name: Build and test v${{matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
@@ -80,6 +84,13 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Fetch Node.js tarball
+        id: node-dist
+        uses: ./.github/actions/node-dist
+        with:
+          version: ${{ matrix.version.version }}
+          arch: ${{ matrix.platform.arch }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
@@ -100,6 +111,7 @@ jobs:
           push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
+            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}},mode=max
           tags: |
