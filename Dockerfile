@@ -3,7 +3,90 @@ ARG UBUNTU_TAG="26.04@sha256:0e73b71479e7bc5f006bca872e25c3cd680dc052a0116f90d63
 ARG TARGETOS
 ARG TARGETARCH
 
-# set up node arch-specific stage requirements
+###############################################################################
+# chisel base: the runtime dependencies node needs, cut from Ubuntu with
+# Canonical's chisel (no shell, no package manager)
+###############################################################################
+FROM ubuntu:${UBUNTU_TAG} AS setup-base
+ARG TARGETARCH
+
+# renovate-chisel: depName=canonical-chisel-releases
+ARG UBUNTU_CHISEL_VERSION="26.04"
+
+# renovate-apt-docker: arch=amd64 versioning=loose depName=golang
+ARG GOLANG_amd64_VERSION="2:1.26~1"
+# renovate-apt-docker: arch=arm64 versioning=loose depName=golang
+ARG GOLANG_arm64_VERSION="2:1.26~1"
+
+# renovate-apt-docker: arch=amd64 versioning=loose depName=ca-certificates
+ARG CACERTIFICATES_amd64_VERSION="20260816ubuntu0.26.04.1"
+# renovate-apt-docker: arch=arm64 versioning=loose depName=ca-certificates
+ARG CACERTIFICATES_arm64_VERSION="20260816ubuntu0.26.04.1"
+
+# renovate-apt-docker: arch=amd64 versioning=loose depName=file
+ARG FILE_amd64_VERSION="1:5.46-5build2"
+# renovate-apt-docker: arch=arm64 versioning=loose depName=file
+ARG FILE_arm64_VERSION="1:5.46-5build2"
+
+# renovate-apt-docker: arch=amd64 versioning=loose depName=libatomic1
+ARG LIBATOMIC_amd64_VERSION="16-20260322-1ubuntu1"
+# renovate-apt-docker: arch=arm64 versioning=loose depName=libatomic1
+ARG LIBATOMIC_arm64_VERSION="16-20260322-1ubuntu1"
+
+# install dependencies
+RUN GOLANG_VERSION=$(eval "echo \$GOLANG_${TARGETARCH}_VERSION") \
+  && CACERTIFICATES_VERSION=$(eval "echo \$CACERTIFICATES_${TARGETARCH}_VERSION") \
+  && FILE_VERSION=$(eval "echo \$FILE_${TARGETARCH}_VERSION") \
+  && LIBATOMIC_VERSION=$(eval "echo \$LIBATOMIC_${TARGETARCH}_VERSION") \
+  && apt-get update \
+  -q \
+  && apt-get install \
+  -y \
+  --no-install-recommends \
+  golang=$GOLANG_VERSION \
+  ca-certificates=$CACERTIFICATES_VERSION \
+  file=${FILE_VERSION} \
+  libatomic1=$LIBATOMIC_VERSION
+
+# build chisel
+WORKDIR /builder
+ADD https://github.com/canonical/chisel.git .
+WORKDIR /builder/cmd/chisel
+RUN go install
+RUN ln -sf /root/go/bin/chisel /usr/bin/chisel
+
+# create chiseled rootfs
+WORKDIR /setup
+ADD https://github.com/canonical/rocks-toolbox.git .
+RUN mkdir -p /rootfs/var/lib/dpkg \
+  && ./chisel-wrapper \
+  --generate-dpkg-status /rootfs/var/lib/dpkg/status \
+  -- \
+  --release ubuntu-${UBUNTU_CHISEL_VERSION} \
+  --root /rootfs/ \
+  ca-certificates_data \
+  tzdata_zoneinfo \
+  libstdc++6_libs \
+  base-files_release-info \
+  base-files_base \
+  libatomic1_libs
+
+# the chiseled rootfs plus the node user; CI builds this stage once per arch
+# and passes it to every version build with --build-context base=...
+FROM scratch AS base
+COPY --from=setup-base /rootfs /
+COPY <<EOF /etc/passwd
+node:x:1000:1000:node:/home/node:
+EOF
+COPY <<EOF /etc/group
+node:x:1000:
+EOF
+USER node
+WORKDIR /home/node
+
+###############################################################################
+# node: download the official binary for the target arch
+###############################################################################
 FROM ubuntu:${UBUNTU_TAG} AS setup-pre-node
 ARG TARGETARCH
 
@@ -38,7 +121,7 @@ RUN grep " node-v${NODE_VERSION}-linux-${ARCH}.tar.xz$" SHASUMS256.txt | sha256s
   -C ./rootfs/usr/ \
   node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
   node-v${NODE_VERSION}-linux-${ARCH}/LICENSE \
-  node-v${NODE_VERSION}-linux-${ARCH}/share 
+  node-v${NODE_VERSION}-linux-${ARCH}/share
 
 
 # node arm64/arm64
@@ -53,25 +136,16 @@ RUN grep " node-v${NODE_VERSION}-linux-${ARCH}.tar.xz$" SHASUMS256.txt | sha256s
   -C ./rootfs/usr/ \
   node-v${NODE_VERSION}-linux-${ARCH}/bin/node \
   node-v${NODE_VERSION}-linux-${ARCH}/LICENSE \
-  node-v${NODE_VERSION}-linux-${ARCH}/share 
+  node-v${NODE_VERSION}-linux-${ARCH}/share
 
 # cant seem to do --from=setup-node-${TARGETOS}-${TARGETARCH} so we rename the stage here
 FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 
-# use the base chisel nodejs image that contains dependencies for the final image
-# combine the rootfs from chisel along with the rootfs from the compiled node stages
-# add node user, set user to node, and set workdir to home dir
-FROM nvitaterna/chisel-nodejs-base:latest@sha256:c4f52e8c6bbccd5ea759e7f6de52e05d340469e74ef1e4184cac9ff215b2a975
+###############################################################################
+# final image: node on top of the chisel base
+###############################################################################
+FROM base
 COPY --from=compiled \
   /download/rootfs/ \
   /
-WORKDIR /home
-COPY <<EOF /etc/passwd
-node:x:1000:1000:node:/home/node:
-EOF
-COPY <<EOF /etc/group
-node:x:1000:
-EOF
-USER node
-WORKDIR /home/node
 ENTRYPOINT ["/usr/bin/node"]
