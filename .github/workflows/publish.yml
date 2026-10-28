@@ -56,7 +56,8 @@ jobs:
           INPUT_ALL: ${{ inputs.all }}
           INPUT_VERSIONS: ${{ inputs.versions }}
         run: |
-          image_paths=(Dockerfile test .github/workflows/publish.yml .github/actions)
+          # what goes into the images; the workflow itself is deliberately not here
+          image_paths=(Dockerfile test .github/actions)
           if [[ "$INPUT_ALL" == "true" ]]; then
             mode=all
           elif [[ -n "$INPUT_VERSIONS" ]]; then
@@ -83,11 +84,17 @@ jobs:
           esac
 
           if [[ "$matrix" == "[]" ]]; then
-            echo "Nothing to publish."
-            exit 1
+            if [[ "$mode" == "changed" ]]; then
+              # e.g. only a workflow file changed: nothing to build, but move the tag
+              echo "Nothing to publish since the last publish."
+              mode=noop
+            else
+              echo "::error::No versions matched."
+              exit 1
+            fi
           fi
           echo "Mode: $mode"
-          echo "Publishing: $(jq -r 'map(.version) | join(", ")' <<< "$matrix")"
+          [[ "$mode" != noop ]] && echo "Publishing: $(jq -r 'map(.version) | join(", ")' <<< "$matrix")"
           {
             echo "mode=$mode"
             echo "matrix=$matrix"
@@ -95,6 +102,9 @@ jobs:
 
   base:
     name: Build base on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+    if: needs.configure.outputs.mode != 'noop'
+    needs:
+      - configure
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -140,6 +150,7 @@ jobs:
 
   build:
     name: Build and test v${{ matrix.version.version }} on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+    if: needs.configure.outputs.mode != 'noop'
     needs:
       - configure
       - base
@@ -262,7 +273,7 @@ jobs:
     name: Push ${{ matrix.version.version }} to Docker Hub
     # runs even when some builds failed: versions whose builds all passed
     # are published, the others are skipped and the run stays red
-    if: ${{ !cancelled() && needs.configure.result == 'success' }}
+    if: ${{ !cancelled() && needs.configure.result == 'success' && needs.configure.outputs.mode != 'noop' }}
     needs:
       - configure
       - build
@@ -310,7 +321,7 @@ jobs:
     name: Mark commit as published
     # only when every version was built and pushed; otherwise the tag stays
     # put and the next run rebuilds everything (quickly, from the cache)
-    if: ${{ needs.configure.outputs.mode != 'explicit' && needs.build.result == 'success' && needs.push.result == 'success' }}
+    if: ${{ !cancelled() && needs.configure.result == 'success' && needs.configure.outputs.mode != 'explicit' && (needs.configure.outputs.mode == 'noop' || (needs.build.result == 'success' && needs.push.result == 'success')) }}
     needs:
       - configure
       - build
