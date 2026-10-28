@@ -1,4 +1,4 @@
-ARG UBUNTU_TAG="questing-20251029@sha256:5922638447b1e3ba114332c896a2c7288c876bb94adec923d70d58a17d2fec5e"
+ARG UBUNTU_TAG="resolute-20261024.1@sha256:8cdfd1908ab55af6d1ce8fdacb24951ad31873f500489cc03378393798ce301c"
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -8,9 +8,9 @@ FROM ubuntu:${UBUNTU_TAG} AS setup-pre-node
 ARG TARGETARCH
 
 # renovate-apt-docker: arch=amd64 versioning=loose depName=xz-utils
-ARG XZUTILS_amd64_VERSION="5.8.1-1build2"
+ARG XZUTILS_amd64_VERSION="5.8.3-1ubuntu0.1"
 # renovate-apt-docker: arch=arm64 versioning=loose depName=xz-utils
-ARG XZUTILS_arm64_VERSION="5.8.1-1build2"
+ARG XZUTILS_arm64_VERSION="5.8.3-1ubuntu0.1"
 
 RUN XZUTILS_VERSION=$(eval "echo \$XZUTILS_${TARGETARCH}_VERSION") \
   && apt-get update \
