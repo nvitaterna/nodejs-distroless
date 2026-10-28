@@ -293,13 +293,15 @@ jobs:
           pattern: digests-${{ matrix.version.version }}-*
           merge-multiple: true
 
+      # the digests directory does not exist when both arch builds failed
       - name: Check that every arch was built
         id: digests
-        working-directory: ${{ runner.temp }}/digests
         env:
           VERSION: ${{ matrix.version.version }}
+          DIGESTS: ${{ runner.temp }}/digests
         run: |
-          n=$(find . -maxdepth 1 -type f | wc -l)
+          mkdir -p "$DIGESTS"
+          n=$(find "$DIGESTS" -maxdepth 1 -type f | wc -l)
           if [[ "$n" -ne 2 ]]; then
             echo "::warning::v$VERSION: only $n of 2 arch builds succeeded, not publishing it in this run"
             echo "skip=true" >> "$GITHUB_OUTPUT"
