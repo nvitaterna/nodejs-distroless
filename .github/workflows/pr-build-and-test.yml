@@ -11,6 +11,11 @@ on:
       - versions.json
       - Dockerfile
 
+# cancel in-progress runs for the same PR when a newer run starts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   configure:
     runs-on: ubuntu-latest
