@@ -6,9 +6,12 @@ name: Publish
 #   - only versions.json changed                            -> new/changed versions
 #   - manual run with "all"                                  -> every version
 #   - manual run with "versions"                             -> just those
-# "Last publish" is the `published` tag, moved by the final job of each
-# successful full or incremental run, so a run that is skipped or fails is
-# caught up by the next one.
+# "Last publish" is recorded on the orphan `published` branch (the commit
+# that was published plus its versions.json), written by the final job of
+# each successful full or incremental run, so a run that is skipped or fails
+# is caught up by the next one. A branch with only those two files is used
+# rather than a tag because moving a ref across commits that touch workflow
+# files needs a token with workflow scope; this branch's diffs never do.
 on:
   push:
     branches:
@@ -42,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      # "all" or "changed" runs move the `published` tag at the end, "explicit" runs don't
+      # "all" or "changed" runs update the `published` branch at the end, "explicit" runs don't
       mode: ${{ steps.set-matrix.outputs.mode }}
     steps:
       - name: Check out the repo
@@ -62,10 +65,12 @@ jobs:
             mode=all
           elif [[ -n "$INPUT_VERSIONS" ]]; then
             mode=explicit
-          elif ! git rev-parse -q --verify 'published^{commit}' > /dev/null; then
-            echo "No 'published' tag yet: publishing every version"
+          elif ! git rev-parse -q --verify 'origin/published^{commit}' > /dev/null \
+            || ! published=$(git show origin/published:commit 2> /dev/null) \
+            || ! git rev-parse -q --verify "${published}^{commit}" > /dev/null; then
+            echo "No published marker yet: publishing every version"
             mode=all
-          elif ! git diff --quiet published HEAD -- "${image_paths[@]}"; then
+          elif ! git diff --quiet "$published" HEAD -- "${image_paths[@]}"; then
             echo "Image definition changed since the last publish: publishing every version"
             mode=all
           else
@@ -79,7 +84,7 @@ jobs:
               wanted=$(jq -c -n --arg v "$INPUT_VERSIONS" '$v | split(",") | map(gsub("^\\s+|\\s+$"; ""))')
               matrix=$(jq -c --argjson wanted "$wanted" 'map(select(.version as $v | $wanted | index($v))) | reverse' versions.json) ;;
             changed)
-              git show published:versions.json > old.versions.json
+              git show origin/published:versions.json > old.versions.json
               matrix=$(jq -c -n '[inputs] as $files | ($files[0] - $files[1]) | reverse' versions.json old.versions.json) ;;
           esac
 
@@ -324,7 +329,7 @@ jobs:
 
   mark-published:
     name: Mark commit as published
-    # only when every version was built and pushed; otherwise the tag stays
+    # only when every version was built and pushed; otherwise the marker stays
     # put and the next run rebuilds everything (quickly, from the cache)
     if: ${{ !cancelled() && needs.configure.result == 'success' && needs.configure.outputs.mode != 'explicit' && (needs.configure.outputs.mode == 'noop' || (needs.build.result == 'success' && needs.push.result == 'success')) }}
     needs:
@@ -337,11 +342,21 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          # GITHUB_TOKEN may not push a tag at a commit that touches workflow
-          # files ("refusing to allow a GitHub App to create or update workflow")
-          token: ${{ secrets.PAT }}
 
-      # the next run diffs against this tag to find what still needs publishing
-      - name: Move the published tag
-        run: git push --force origin "HEAD:refs/tags/published"
+      # the next run diffs against this commit to find what still needs
+      # publishing; an orphan commit with just these two files, so GITHUB_TOKEN
+      # can push it (no workflow files in the diff)
+      - name: Record the published commit
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          tree=$(mktemp -d)
+          echo "$GITHUB_SHA" > "$tree/commit"
+          cp versions.json "$tree/versions.json"
+          git --work-tree="$tree" read-tree --empty
+          git --work-tree="$tree" add commit versions.json
+          marker=$(git commit-tree "$(git write-tree)" -m "published $GITHUB_SHA")
+          git push --force origin "$marker:refs/heads/published"
