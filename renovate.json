@@ -73,7 +73,7 @@
       "groupName": "GitHub Actions"
     }
   ],
-  "platformAutomerge": false,
+  "platformAutomerge": true,
   "customDatasources": {
     "github-branches": {
       "defaultRegistryUrlTemplate": "https://api.github.com/repos/canonical/chisel-releases/branches",
