@@ -1,4 +1,10 @@
-import { getNowMilli, getTimeMilli, sortVersions, isLts } from './utils.js';
+import {
+  getNowMilli,
+  getTimeMilli,
+  sortVersions,
+  isLts,
+  isActive,
+} from './utils.js';
 import { faker } from '@faker-js/faker';
 import { gt, lt } from 'semver';
 
@@ -73,6 +79,34 @@ describe('utils', () => {
         lts: faker.date.future().toISOString(),
       });
       expect(isLts(scheduleItem)).toBe(false);
+    });
+  });
+
+  describe('isActive', () => {
+    const day = 1000 * 60 * 60 * 24;
+
+    it('should return true between the start and end dates', () => {
+      const scheduleItem = mockScheduleItem({
+        start: new Date(Date.now() - day).toISOString(),
+        end: new Date(Date.now() + day).toISOString(),
+      });
+      expect(isActive(scheduleItem)).toBe(true);
+    });
+
+    it('should return false before the start date (alpha phase)', () => {
+      const scheduleItem = mockScheduleItem({
+        start: new Date(Date.now() + day).toISOString(),
+        end: new Date(Date.now() + 365 * day).toISOString(),
+      });
+      expect(isActive(scheduleItem)).toBe(false);
+    });
+
+    it('should return false after the end date', () => {
+      const scheduleItem = mockScheduleItem({
+        start: new Date(Date.now() - 365 * day).toISOString(),
+        end: new Date(Date.now() - day).toISOString(),
+      });
+      expect(isActive(scheduleItem)).toBe(false);
     });
   });
 });

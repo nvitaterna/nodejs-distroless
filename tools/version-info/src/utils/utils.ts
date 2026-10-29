@@ -39,6 +39,14 @@ export const isLts = (scheduleItem: ScheduleItem) => {
   return true;
 };
 
+/**
+ * A line is published from its first Current release (`start`) until its end
+ * of life. Before `start` a line only has Alpha pre-releases (Node.js 27+),
+ * which are not for production use.
+ */
 export const isActive = (scheduleItem: ScheduleItem) => {
-  return getTimeMilli(scheduleItem.end) > getNowMilli();
+  return (
+    getTimeMilli(scheduleItem.start) <= getNowMilli() &&
+    getTimeMilli(scheduleItem.end) > getNowMilli()
+  );
 };

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { prerelease } from 'semver';
 
 export const NODEJS_VERSIONS_URL = 'https://nodejs.org/dist/';
 export const NODEJS_INDEX_URL = `${NODEJS_VERSIONS_URL}index.json`;
@@ -31,6 +32,8 @@ export const fetchVersions = async () => {
     .filter((release) => {
       return (
         /^v[1-9]/.test(release.version) &&
+        // no Alpha (27.0.0-alpha.1) or other pre-releases
+        prerelease(release.version) === null &&
         REQUIRED_FILES.every((file) => release.files.includes(file))
       );
     })
