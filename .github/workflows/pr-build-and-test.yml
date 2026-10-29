@@ -210,14 +210,15 @@ jobs:
             -e EXPECTED_NODE_VERSION \
             "$IMAGE" /check.js
 
-      # the image carries a dpkg status file for its chiselled packages and
-      # grype recognises the node binary, so this covers both the Ubuntu
-      # libraries and Node.js itself; only findings with a fix available fail
-      # the build, the rest are listed in the log
+      # the image carries a dpkg status file for its chiselled packages, so
+      # grype sees the Ubuntu libraries; fixable High/Critical findings in
+      # them fail the build. Node.js's own CVEs are left to the weekly scan
+      # of the newest image per line (see .github/grype/pr.yaml for why)
       - name: Scan for vulnerabilities
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
           image: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
+          config: .github/grype/pr.yaml
           fail-build: true
           severity-cutoff: high
           only-fixed: true

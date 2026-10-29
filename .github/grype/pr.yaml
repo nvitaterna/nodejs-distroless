@@ -1,0 +1,11 @@
+# Grype configuration for the PR image scan (.github/workflows/pr-build-and-test.yml).
+#
+# The PR build deliberately includes the oldest version of each Node.js line,
+# and old Node.js versions carry known CVEs that are fixed in later patch
+# releases of the same line. Those are tracked by the weekly scan of the
+# newest image per line (scan-images.yml) and reported in the Security tab,
+# where "upgrade Node.js" is the only remedy anyway. The PR gate covers what
+# this repository controls: the chiselled Ubuntu packages in the image.
+ignore:
+  - package:
+      type: binary
