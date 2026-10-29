@@ -45,6 +45,19 @@ describe('fetchVersions', () => {
     expect(await fetchVersions()).toEqual(['18.0.0']);
   });
 
+  it('should filter out pre-releases', async () => {
+    server.use(
+      mockVersionsResponse([
+        '26.13.0',
+        '27.0.0-alpha.1',
+        '27.0.0-alpha.0.0.0',
+        '27.0.0-rc.1',
+      ]),
+    );
+
+    expect(await fetchVersions()).toEqual(['26.13.0']);
+  });
+
   it('should fail when the index cannot be fetched', async () => {
     server.use(mockVersionsResponse([], {}, 503));
 
