@@ -83,6 +83,7 @@ Everything lives in this repository and runs without manual steps:
 | Version list | `versions.json`, kept current by `tools/version-info/` | The hourly `get-new-versions` workflow runs the tool and commits any new versions. |
 | Publishing | `.github/workflows/publish.yml` | On every change to `main`: builds the base once per arch, builds and smoke-tests each version on it, then pushes manifest lists. A base change republishes every version; a version list change publishes only the new ones. |
 | Tarball cache | `.github/actions/node-dist` | Keeps each Node.js tarball on the `node-dist` GitHub release so builds do not depend on nodejs.org being fast. |
+| Vulnerability scans | `.github/workflows/pr-build-and-test.yml`, `.github/workflows/scan-images.yml` | Every PR-built image is scanned with Grype and fails on fixable High/Critical findings. The newest image of each line is rescanned weekly and the results go to the repository's Security tab. |
 | Updates | `renovate.json` | Ubuntu LTS, Chisel release, apt packages, GitHub Actions and the tool's npm dependencies. Non-major updates merge automatically once checks pass; majors wait for review. |
 
 Pull requests build the oldest and newest version of each major line on both architectures and run `test/check.js` inside the image.

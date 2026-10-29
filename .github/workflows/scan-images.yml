@@ -1,0 +1,60 @@
+name: Scan published images
+
+# Weekly vulnerability scan of the newest image of each published Node.js
+# line. Results go to the repository's Security tab (code scanning), one
+# category per line, so there is a history and alerts without any extra
+# infrastructure. PR builds are scanned separately before merge.
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  lines:
+    name: Published lines
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      majors: ${{ steps.majors.outputs.majors }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: List published lines
+        id: majors
+        run: |
+          majors=$(jq -c '[.[].version | split(".")[0] | tonumber] | unique | map(tostring)' versions.json)
+          echo "Scanning: $majors"
+          echo "majors=$majors" >> "$GITHUB_OUTPUT"
+
+  scan:
+    name: Scan ${{ matrix.major }}
+    needs: lines
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload-sarif
+    strategy:
+      fail-fast: false
+      matrix:
+        major: ${{ fromJson(needs.lines.outputs.majors) }}
+    steps:
+      - name: Scan nvitaterna/nodejs-distroless:${{ matrix.major }}
+        id: scan
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: nvitaterna/nodejs-distroless:${{ matrix.major }}
+          fail-build: false
+          severity-cutoff: medium
+          by-cve: true
+          output-format: sarif
+          cache-db: true
+
+      - name: Upload results to code scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
+          category: image-${{ matrix.major }}
