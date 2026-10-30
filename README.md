@@ -12,6 +12,18 @@ Images are published to Docker Hub as [`nvitaterna/nodejs-distroless`](https://h
 
 ---
 
+## Why?
+
+**OS updates for every Node.js version, not just the newest one.**
+
+Public distroless Node.js images, such as Google's distroless and Chainguard's free images, only keep the newest release up to date. Pin an exact Node.js version and that image is frozen the moment a newer patch ships: it never gets another OS or library security update.
+
+Sometimes you cannot move to the newest patch right away, because of a regression, a compatibility test cycle or a release freeze. Here, every published version of every supported Node.js line is rebuilt whenever the Ubuntu base changes, so `22.15.0` keeps receiving the same OS fixes as `22.23.4`. You choose when to upgrade Node.js, without giving up OS patches in the meantime.
+
+Because of this, exact-version tags are rebuilt and move to new digests over time. Pin by digest if you need a byte-for-byte reproducible image.
+
+---
+
 ## Features
 
 - Runs only as the non-root `node` user.
