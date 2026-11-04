@@ -71,6 +71,22 @@ RUN mkdir -p /rootfs/var/lib/dpkg \
   base-files_base \
   libatomic1_libs
 
+# busybox for the debug variant, cut on its own so it can be layered over the
+# release image. Its dpkg status goes in status.d (read by scanners next to
+# the base's status file); the applets are linked into /busybox, which is
+# last on the debug image's PATH so they never shadow anything in the base
+RUN mkdir -p /rootfs-debug/var/lib/dpkg/status.d /rootfs-debug/busybox \
+  && ./chisel-wrapper \
+  --generate-dpkg-status /rootfs-debug/var/lib/dpkg/status.d/busybox-static \
+  -- \
+  --release ubuntu-${UBUNTU_CHISEL_VERSION} \
+  --root /rootfs-debug/ \
+  busybox-static_bins \
+  && rm -rf /rootfs-debug/bin \
+  && for applet in $(/rootfs-debug/usr/bin/busybox --list); do \
+  ln -s /usr/bin/busybox "/rootfs-debug/busybox/$applet"; \
+  done
+
 # the chiseled rootfs plus the node user; CI builds this stage once per arch
 # and passes it to every version build with --build-context base=...
 FROM scratch AS base
@@ -83,6 +99,11 @@ node:x:1000:
 EOF
 USER node
 WORKDIR /home/node
+
+# what the debug variant adds; CI builds it once per arch next to the base
+# and passes it to every version build with --build-context debug-tools=...
+FROM scratch AS debug-tools
+COPY --from=setup-base /rootfs-debug /
 
 ###############################################################################
 # node: download the official binary for the target arch
@@ -142,10 +163,18 @@ RUN grep " node-v${NODE_VERSION}-linux-${ARCH}.tar.xz$" SHASUMS256.txt | sha256s
 FROM setup-node-${TARGETOS}-${TARGETARCH} AS compiled
 
 ###############################################################################
-# final image: node on top of the chisel base
+# images: node on top of the chisel base
 ###############################################################################
-FROM base
+FROM base AS release
 COPY --from=compiled \
   /download/rootfs/ \
   /
 ENTRYPOINT ["/usr/bin/node"]
+
+# release plus a busybox shell and tools, for debugging (published as *-debug)
+FROM release AS debug
+COPY --from=debug-tools / /
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/busybox
+
+# the default target
+FROM release

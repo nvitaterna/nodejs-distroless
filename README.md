@@ -51,6 +51,8 @@ Every maintenance, LTS and current Node.js release line is published, tagged by:
 | `lts` | `lts` | newest release of the newest Active LTS line |
 | `latest` | `latest` | newest release of the newest line, which may be a Current (non-LTS) line |
 
+Every tag also has a [debug variant](#debugging) with a `-debug` suffix, e.g. `22-debug`, `lts-debug`, `latest-debug`.
+
 For production, `lts` or a major tag such as `22` is usually the right choice: you get Node.js patches and OS updates without jumping to a new major. The full list of versions and their tags is in [`versions.json`](versions.json).
 
 Images for Node.js lines that have reached end of life stay on Docker Hub but are not rebuilt, so they stop receiving base image updates.
@@ -104,9 +106,42 @@ Handling the signals yourself is worth doing even with an init process, so in-fl
 
 ---
 
+## Debugging
+
+The images have no shell, so `docker exec -it <container> sh` does not work. Options, from least to most invasive:
+
+**Run a one-off script with `node`.** The entrypoint is `node`, so you can inspect the filesystem or environment without a shell:
+
+```sh
+docker run --rm nvitaterna/nodejs-distroless:22 -e 'console.log(require("fs").readdirSync("/home/node"))'
+docker exec <container> node -e 'console.log(process.env)'
+```
+
+**Attach a debugging container** that shares the target's namespaces, so you keep the production image unchanged:
+
+```sh
+# Kubernetes: an ephemeral container in the pod, sharing the app's process namespace
+kubectl debug -it <pod> --image=busybox --target=<container> --profile=general
+# Docker: a busybox container in the app container's PID and network namespaces
+docker run --rm -it --pid=container:<container> --network=container:<container> --cap-add SYS_PTRACE busybox
+```
+
+Through the shared PID namespace, the app's filesystem is visible under `/proc/1/root/` (this needs `SYS_PTRACE`, which `--profile=general` and `--cap-add` grant). Docker Desktop's [`docker debug`](https://docs.docker.com/reference/cli/docker/debug/) does the same with one command.
+
+**Use the `-debug` variant.** Every tag has a `-debug` counterpart (`22-debug`, `22.23.4-debug`, `latest-debug`, ...) that is the same image plus a statically linked [BusyBox](https://busybox.net/) shell and utilities in `/busybox`. The entrypoint is still `node`, so it is a drop-in replacement; override the entrypoint to get a shell:
+
+```sh
+docker run --rm -it --entrypoint sh nvitaterna/nodejs-distroless:22-debug
+docker exec -it <container> sh   # in a container started from a -debug image
+```
+
+It runs as the `node` user like the regular image. If you need root, start it with `--user 0`. Use the debug variant for troubleshooting only, not in production: a shell is exactly what the regular image leaves out.
+
+---
+
 ## Limitations
 
-- No shell or package manager: you cannot `docker exec` into a container or install packages at runtime.
+- No shell or package manager: you cannot `docker exec` into a container or install packages at runtime (see [Debugging](#debugging)).
 - No `npm` or `npx`: all dependencies must be installed at build time and copied in.
 - Cannot run as root or perform privileged operations.
 - Only maintenance, LTS and current Node.js lines receive updates; see [Tags](#tags).
@@ -120,20 +155,24 @@ Everything lives in this repository and runs without manual steps:
 | Part | Where | What it does |
 |---|---|---|
 | Chisel base | `Dockerfile` (`base` stage) | Builds Chisel and cuts the runtime rootfs (CA certificates, tzdata, libstdc++, libatomic1) from Ubuntu LTS; adds the `node` user. |
-| Node.js layer | `Dockerfile` (node stages) | Downloads the official Node.js tarball, verifies it against nodejs.org's `SHASUMS256.txt`, and copies `node` onto the base. |
+| Node.js layer | `Dockerfile` (`release` stage) | Downloads the official Node.js tarball, verifies it against nodejs.org's `SHASUMS256.txt`, and copies `node` onto the base. |
+| Debug variant | `Dockerfile` (`debug-tools` and `debug` stages) | Cuts `busybox-static` with Chisel (so scanners see it in the dpkg status) and layers it over the release image, with its applets in `/busybox`. |
 | Version list | `versions.json`, kept current by `tools/version-info/` | The hourly `get-new-versions` workflow runs the tool and commits any new versions. |
 | Publishing | `.github/workflows/publish.yml` | On every change to `main`: builds the base once per arch, builds and smoke-tests each version on it, then pushes manifest lists to Docker Hub and GHCR. A base change republishes every version; a version list change publishes only the new ones. The last published commit is recorded on the orphan `published` branch. |
 | Tarball cache | `.github/actions/node-dist` | Keeps each Node.js tarball on the `node-dist` GitHub release so builds do not depend on nodejs.org being fast. |
 | Vulnerability scans | `.github/workflows/pr-build-and-test.yml`, `.github/workflows/scan-images.yml` | Every PR-built image is scanned with Grype and fails on fixable High/Critical findings. The newest image of each line is rescanned daily and the results go to the repository's Security tab. |
 | Updates | `renovate.json` | Ubuntu LTS, Chisel release, apt packages, GitHub Actions and the tool's npm dependencies. Non-major updates merge automatically once checks pass; majors wait for review. |
 
-Pull requests build the oldest and newest version of each major line on both architectures and run `test/check.js` inside the image.
+Pull requests build the oldest and newest version of each major line on both architectures, in both variants, and run `test/check.js` inside the image.
 
 ### Building locally
 
 ```sh
 docker build --build-arg NODE_VERSION=22.23.4 -t nodejs-distroless:22.23.4 .
 docker run --rm nodejs-distroless:22.23.4 --version
+
+# the debug variant
+docker build --target debug --build-arg NODE_VERSION=22.23.4 -t nodejs-distroless:22.23.4-debug .
 ```
 
 The build downloads Node.js from nodejs.org and verifies its checksum. Set `NODE_DIST_URL` to download the tarball from elsewhere.

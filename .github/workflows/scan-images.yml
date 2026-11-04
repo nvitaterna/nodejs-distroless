@@ -1,7 +1,7 @@
 name: Scan published images
 
 # Daily vulnerability scan of the newest image of each published Node.js
-# line. Results go to the repository's Security tab (code scanning), one
+# line, and of its debug variant. Results go to the repository's Security tab (code scanning), one
 # category per line, so there is a history and alerts without any extra
 # infrastructure. PR builds are scanned separately before merge.
 on:
@@ -31,7 +31,7 @@ jobs:
           echo "majors=$majors" >> "$GITHUB_OUTPUT"
 
   scan:
-    name: Scan ${{ matrix.major }}
+    name: Scan ${{ matrix.major }}${{ matrix.suffix }}
     needs: lines
     runs-on: ubuntu-latest
     permissions:
@@ -41,12 +41,13 @@ jobs:
       fail-fast: false
       matrix:
         major: ${{ fromJson(needs.lines.outputs.majors) }}
+        suffix: ["", "-debug"]
     steps:
-      - name: Scan nvitaterna/nodejs-distroless:${{ matrix.major }}
+      - name: Scan nvitaterna/nodejs-distroless:${{ matrix.major }}${{ matrix.suffix }}
         id: scan
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
-          image: nvitaterna/nodejs-distroless:${{ matrix.major }}
+          image: nvitaterna/nodejs-distroless:${{ matrix.major }}${{ matrix.suffix }}
           fail-build: false
           severity-cutoff: medium
           by-cve: true
@@ -57,4 +58,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
-          category: image-${{ matrix.major }}
+          category: image-${{ matrix.major }}${{ matrix.suffix }}

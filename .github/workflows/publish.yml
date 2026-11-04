@@ -157,15 +157,29 @@ jobs:
           context: .
           target: base
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
-          outputs: type=oci,tar=false,dest=${{ runner.temp }}/base-oci
+          outputs: type=oci,tar=false,dest=${{ runner.temp }}/oci/base
           cache-from: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           cache-to: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+
+      # what the debug variant adds (busybox); it shares the base's builder
+      # stage, so this reuses what the previous step just built
+      - name: Build debug tools
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: debug-tools
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          outputs: type=oci,tar=false,dest=${{ runner.temp }}/oci/debug-tools
+          cache-from: |
+            type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+            type=gha,scope=debug-tools-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,scope=debug-tools-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
       - name: Upload base
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          path: ${{ runner.temp }}/base-oci
+          path: ${{ runner.temp }}/oci
           if-no-files-found: error
           retention-days: 1
 
@@ -204,15 +218,17 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          path: ${{ runner.temp }}/base-oci
+          path: ${{ runner.temp }}/oci
 
       - name: Resolve base
         id: base
         env:
-          BASE_OCI: ${{ runner.temp }}/base-oci
+          OCI: ${{ runner.temp }}/oci
         run: |
-          digest=$(jq -r '.manifests[0].digest' "$BASE_OCI/index.json")
-          echo "context=base=oci-layout://$BASE_OCI@$digest" >> "$GITHUB_OUTPUT"
+          for name in base debug-tools; do
+            digest=$(jq -r '.manifests[0].digest' "$OCI/$name/index.json")
+            echo "$name=$name=oci-layout://$OCI/$name@$digest" >> "$GITHUB_OUTPUT"
+          done
 
       - name: Docker meta
         id: meta
@@ -241,16 +257,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
+      # both variants are built in this job rather than as a matrix dimension:
+      # a full publish is already close to the 256-job matrix limit
       - name: Build and export to docker
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
+          target: release
           load: true
           push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
             NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
-          build-contexts: ${{ steps.base.outputs.context }}
+          build-contexts: ${{ steps.base.outputs.base }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.TEST_TAG }}
@@ -270,33 +289,83 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
+          target: release
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
             NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
-          build-contexts: ${{ steps.base.outputs.context }}
+          build-contexts: ${{ steps.base.outputs.base }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,"name=${{ env.DOCKERHUB_IMAGE }},${{ env.GHCR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
           provenance: mode=max
           sbom: true
 
-      - name: Export digest
+      - name: Build and export debug variant to docker
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: debug
+          load: true
+          push: false
+          build-args: |
+            NODE_VERSION=${{ matrix.version.version }}
+            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
+          build-contexts: |
+            ${{ steps.base.outputs.base }}
+            ${{ steps.base.outputs.debug-tools }}
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.TEST_TAG }}-debug
+
+      - name: Test debug variant
+        env:
+          PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          EXPECTED_NODE_VERSION: ${{ matrix.version.version }}
+        run: |
+          docker run --platform "$PLATFORM" --rm \
+            -v "$PWD/test/check.js:/check.js:ro" \
+            -e EXPECTED_NODE_VERSION \
+            "$TEST_TAG-debug" /check.js
+          docker run --platform "$PLATFORM" --rm --entrypoint sh \
+            "$TEST_TAG-debug" -c 'test "$(id -u)" = 1000 && ls /home/node > /dev/null && wget --help 2>&1 | grep -q Usage'
+
+      - name: Push debug variant by digest
+        id: build-debug
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: debug
+          build-args: |
+            NODE_VERSION=${{ matrix.version.version }}
+            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
+          build-contexts: |
+            ${{ steps.base.outputs.base }}
+            ${{ steps.base.outputs.debug-tools }}
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,"name=${{ env.DOCKERHUB_IMAGE }},${{ env.GHCR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
+          provenance: mode=max
+          sbom: true
+
+      - name: Export digests
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
+          DEBUG_DIGEST: ${{ steps.build-debug.outputs.digest }}
+          DIGESTS: ${{ runner.temp }}/digests
         run: |
-          mkdir -p "${{ runner.temp }}/digests"
-          touch "${{ runner.temp }}/digests/${DIGEST#sha256:}"
+          mkdir -p "$DIGESTS/release" "$DIGESTS/debug"
+          touch "$DIGESTS/release/${DIGEST#sha256:}" "$DIGESTS/debug/${DEBUG_DIGEST#sha256:}"
 
-      - name: Upload digest
+      - name: Upload digests
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: digests-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          path: ${{ runner.temp }}/digests/*
+          path: ${{ runner.temp }}/digests
           if-no-files-found: error
           retention-days: 1
 
   push:
-    name: Push ${{ matrix.version.version }} to Docker Hub
+    name: Push ${{ matrix.version.version }}
     # runs even when some builds failed: versions whose builds all passed
     # are published, the others are skipped and the run stays red
     if: ${{ !cancelled() && needs.configure.result == 'success' && needs.configure.outputs.mode != 'noop' }}
@@ -318,19 +387,23 @@ jobs:
           pattern: digests-${{ matrix.version.version }}-*
           merge-multiple: true
 
-      # the digests directory does not exist when both arch builds failed
+      # each arch build uploads one release and one debug digest only when
+      # everything in it passed; the directories do not exist when no arch did
       - name: Check that every arch was built
         id: digests
         env:
           VERSION: ${{ matrix.version.version }}
           DIGESTS: ${{ runner.temp }}/digests
         run: |
-          mkdir -p "$DIGESTS"
-          n=$(find "$DIGESTS" -maxdepth 1 -type f | wc -l)
-          if [[ "$n" -ne 2 ]]; then
-            echo "::warning::v$VERSION: only $n of 2 arch builds succeeded, not publishing it in this run"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
+          for variant in release debug; do
+            mkdir -p "$DIGESTS/$variant"
+            n=$(find "$DIGESTS/$variant" -maxdepth 1 -type f | wc -l)
+            if [[ "$n" -ne 2 ]]; then
+              echo "::warning::v$VERSION: only $n of 2 arch builds succeeded, not publishing it in this run"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              break
+            fi
+          done
 
       - name: Login to Docker Hub
         if: steps.digests.outputs.skip != 'true'
@@ -348,17 +421,21 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # the per-arch images were pushed to both registries by digest, so one
-      # manifest list built from the Docker Hub copies is tagged in both
-      - name: Create manifest list and push
+      # manifest list built from the Docker Hub copies is tagged in both. The
+      # debug variant gets every tag with a -debug suffix (22-debug, latest-debug)
+      - name: Create manifest lists and push
         if: steps.digests.outputs.skip != 'true'
-        working-directory: ${{ runner.temp }}/digests
         env:
           TAGS: ${{ toJSON(matrix.version.tags) }}
+          DIGESTS: ${{ runner.temp }}/digests
         run: |
-          mapfile -t tag_args < <(jq -r --arg hub "$DOCKERHUB_IMAGE" --arg ghcr "$GHCR_IMAGE" \
-            '.[] | ("-t", "\($hub):\(.)", "-t", "\($ghcr):\(.)")' <<< "$TAGS")
-          mapfile -t sources < <(printf "$DOCKERHUB_IMAGE@sha256:%s\n" *)
-          docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+          for variant in release debug; do
+            suffix=$([[ "$variant" == debug ]] && echo -debug || true)
+            mapfile -t tag_args < <(jq -r --arg hub "$DOCKERHUB_IMAGE" --arg ghcr "$GHCR_IMAGE" --arg suffix "$suffix" \
+              '.[] | ("-t", "\($hub):\(.)\($suffix)", "-t", "\($ghcr):\(.)\($suffix)")' <<< "$TAGS")
+            mapfile -t sources < <(cd "$DIGESTS/$variant" && printf "$DOCKERHUB_IMAGE@sha256:%s\n" *)
+            docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+          done
 
   mark-published:
     name: Mark commit as published
