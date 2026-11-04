@@ -135,7 +135,11 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # built once per arch and handed to every version build as an OCI
-      # layout, so all versions in a run share the exact same base
+      # layout, so all versions in a run share the exact same base. Cached in
+      # the GitHub Actions cache: PR runs read main's entries and write their
+      # own, and entries unused for 7 days are evicted. Version builds are not
+      # cached: a new version has nothing to reuse, and after a base change
+      # only the tarball unpack would be (the tarball itself is on node-dist)
       - name: Build base
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
@@ -143,8 +147,8 @@ jobs:
           target: base
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           outputs: type=oci,tar=false,dest=${{ runner.temp }}/base-oci
-          cache-from: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+          cache-from: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
       - name: Upload base
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -231,8 +235,6 @@ jobs:
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ env.TEST_TAG }}
-          cache-from: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
       - name: Test Docker image
         env:
@@ -257,8 +259,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-${{ matrix.version.version }}-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
           provenance: mode=max
           sbom: true
 
@@ -330,7 +330,7 @@ jobs:
   mark-published:
     name: Mark commit as published
     # only when every version was built and pushed; otherwise the marker stays
-    # put and the next run rebuilds everything (quickly, from the cache)
+    # put and the next run rebuilds everything (the base from the cache)
     if: ${{ !cancelled() && needs.configure.result == 'success' && needs.configure.outputs.mode != 'explicit' && (needs.configure.outputs.mode == 'noop' || (needs.build.result == 'success' && needs.push.result == 'success')) }}
     needs:
       - configure
