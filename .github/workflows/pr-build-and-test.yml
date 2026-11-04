@@ -22,7 +22,6 @@ jobs:
       # "true" when the PR touches nothing that goes into the images
       skip: ${{ steps.changes.outputs.images != 'true' }}
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      safeRefName: ${{ steps.safeRefName.outputs.REF }}
     steps:
       - name: Get changed paths
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
@@ -72,11 +71,6 @@ jobs:
           fi
           echo "Building: $(jq -r 'map(.version) | join(", ")' <<< "$matrix")"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-      - name: Get safe ref name
-        id: safeRefName
-        run: |
-          ref=${{github.ref}}
-          echo "REF=${ref//\//-}" >> "$GITHUB_OUTPUT"
 
   base:
     name: Build base on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
@@ -107,7 +101,9 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # built once per arch and handed to every version build as an OCI
-      # layout, same as the publish workflow; this is the slow part on arm64
+      # layout, same as the publish workflow; this is the slow part on arm64.
+      # The GitHub Actions cache scopes it per branch: a PR reads main's
+      # entries and writes its own
       - name: Build base
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
@@ -115,10 +111,8 @@ jobs:
           target: base
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           outputs: type=oci,tar=false,dest=${{ runner.temp }}/base-oci
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{ needs.configure.outputs.safeRefName }},mode=max
-          cache-from: |
-            type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{ needs.configure.outputs.safeRefName }}
-            type=registry,ref=nvitaterna/buildcache:${{ vars.REGISTRY_IMAGE }}-base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-from: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
       - name: Upload base
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -193,12 +187,8 @@ jobs:
             NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
           build-contexts: ${{ steps.base.outputs.context }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
-          cache-to: type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}},mode=max
           tags: |
             nvitaterna/nodejs-distroless:${{ matrix.version.version }}
-          cache-from: |
-            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{needs.configure.outputs.safeRefName}}
-            type=registry,ref=nvitaterna/buildcache:${{vars.REGISTRY_IMAGE}}-${{matrix.version.version}}-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
       - name: Test Docker image
         env:
           PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
