@@ -2,6 +2,12 @@
 
 **Distroless Node.js Docker images, built from Ubuntu LTS with Canonical's Chisel**
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/nvitaterna/nodejs-distroless)](https://hub.docker.com/r/nvitaterna/nodejs-distroless)
+[![Image size](https://img.shields.io/docker/image-size/nvitaterna/nodejs-distroless/lts?label=size%20(lts))](https://hub.docker.com/r/nvitaterna/nodejs-distroless/tags)
+[![Latest version](https://img.shields.io/docker/v/nvitaterna/nodejs-distroless/latest?label=latest)](https://hub.docker.com/r/nvitaterna/nodejs-distroless/tags)
+[![Publish](https://github.com/nvitaterna/nodejs-distroless/actions/workflows/publish.yml/badge.svg)](https://github.com/nvitaterna/nodejs-distroless/actions/workflows/publish.yml)
+[![License](https://img.shields.io/github/license/nvitaterna/nodejs-distroless)](LICENSE)
+
 ---
 
 ## Overview
@@ -26,6 +32,30 @@ Public distroless Node.js images, such as Google's distroless and Chainguard's f
 Sometimes you cannot move to the newest patch right away, because of a regression, a compatibility test cycle or a release freeze. Here, every published version of every supported Node.js line is rebuilt whenever the Ubuntu base changes, so `22.15.0` keeps receiving the same OS fixes as `22.23.4`. You choose when to upgrade Node.js, without giving up OS patches in the meantime.
 
 Because of this, exact-version tags are rebuilt and move to new digests over time. Pin by digest if you need a byte-for-byte reproducible image.
+
+---
+
+## Compared to other images
+
+| | nodejs-distroless | [Google distroless](https://github.com/GoogleContainerTools/distroless) | [Chainguard](https://images.chainguard.dev/directory/image/node/overview) (free) | `node:*-alpine` | `node:*-slim` |
+|---|---|---|---|---|---|
+| Base | Ubuntu LTS (Chisel) | Debian | Wolfi | Alpine | Debian |
+| libc | glibc | glibc | glibc | musl | glibc |
+| Shell / package manager | No (`-debug` has BusyBox) | No (`:debug` has BusyBox) | No (`-dev` has both) | Yes | Yes |
+| Runs as non-root by default | Yes | `:nonroot` tags | Yes | No | No |
+| Node.js versions | every release of every supported line | newest of each supported line | newest only | every release | every release |
+| OS updates for older Node.js versions | Yes, every version is rebuilt | No | No | No | No |
+| Size, amd64 compressed | 55.0 MB | 60.3 MB | 66.1 MB | 62.9 MB | 85.7 MB |
+
+Sizes are the download size of the Node.js 26 images for `linux/amd64` (Chainguard: `latest`, also 26.x), measured on 2026-11-04 with [`scripts/image-sizes.sh`](scripts/image-sizes.sh). Run it to get current numbers or other platforms:
+
+```sh
+scripts/image-sizes.sh                       # linux/amd64
+scripts/image-sizes.sh --platform linux/arm64
+scripts/image-sizes.sh node:22-slim nvitaterna/nodejs-distroless:22   # any images
+```
+
+Alpine uses musl, which some native addons and prebuilt binaries don't support. The Debian-based official images include a shell, package manager and many OS packages that a production container doesn't need, each one something to patch.
 
 ---
 
@@ -64,26 +94,60 @@ Images for Node.js lines that have reached end of life stay on Docker Hub but ar
 These images are for running pre-built applications. Use a multi-stage build: install and build in a standard Node.js image, then copy the result into the distroless image.
 
 ```Dockerfile
-# Build stage
-FROM node:22 AS build
+# Build stage: the same Node.js version as the runtime, so native addons
+# are compiled against the right ABI
+FROM node:22.23.4 AS build
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-RUN npm ci --omit=dev
+# skip this step if your app has no build script
+RUN npm run build
+RUN npm prune --omit=dev
 
 # Production stage
-FROM nvitaterna/nodejs-distroless:22
+FROM nvitaterna/nodejs-distroless:22.23.4
 WORKDIR /home/node/app
-COPY --from=build /app /home/node/app
-CMD ["index.js"]
+ENV NODE_ENV=production
+COPY --from=build /app/package.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+CMD ["dist/index.js"]
 ```
 
-_Replace `index.js` with your app's entry point._
+_Replace `dist` and `dist/index.js` with your app's build output and entry point._
+
+Add a `.dockerignore` so `COPY . .` doesn't send your local `node_modules`, build output, `.git` or secrets to the build:
+
+```
+node_modules
+dist
+.git
+.env*
+```
 
 **Notes:**
 
 - The entrypoint is `node`, so `CMD` takes the arguments you would pass to `node`.
 - The only user is `node` (uid 1000), with home directory `/home/node`. There is no root user to switch to, and you do not need a `USER` instruction.
+- Copied files are owned by root and read-only to the app, which is usually what you want. If the app needs to write to a directory, create it in the build stage and copy it with `COPY --chown=node:node`.
+- The image does not set `NODE_ENV`. Set it yourself (as above) if your app or its dependencies rely on it.
 - The image includes CA certificates and timezone data.
+- Use the same Node.js version in both stages. `node:22` and `nodejs-distroless:22` both track the newest 22.x but are updated at different times, so pinning the full version keeps them in step.
+
+### Pinning by digest
+
+Tags are rebuilt whenever the Ubuntu base changes (see [Why?](#why)). For a byte-for-byte reproducible build, pin the digest as well as the tag:
+
+```sh
+docker buildx imagetools inspect nvitaterna/nodejs-distroless:22.23.4 --format '{{.Manifest.Digest}}'
+```
+
+```Dockerfile
+FROM nvitaterna/nodejs-distroless:22.23.4@sha256:<digest>
+```
+
+The tag is kept for readability; the digest decides what is pulled. It is the digest of the multi-arch manifest list, so the same line works on amd64 and arm64, and it is the same on Docker Hub and GHCR. [Renovate](https://docs.renovatebot.com/docker/#digest-pinning) and [Dependabot](https://docs.github.com/en/code-security/dependabot) can update pinned digests for you, so you still pick up base image updates, through reviewed PRs.
 
 ### Stopping cleanly (signals and PID 1)
 
