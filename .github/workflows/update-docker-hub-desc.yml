@@ -7,7 +7,11 @@ on:
     paths:
       - README.md
 
-concurrency: production
+# its own group: sharing "production" with the publish workflow meant a
+# README change could cancel a waiting publish run (GitHub keeps only one
+# pending run per group) and wait behind a full publish. Within this group a
+# newer README replacing a waiting older one is fine: the newest one wins
+concurrency: dockerhub-description
 
 jobs:
   dockerHubDescription:
