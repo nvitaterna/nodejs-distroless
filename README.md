@@ -87,7 +87,7 @@ _Replace `index.js` with your app's entry point._
 
 The image has no init process, so `node` runs as PID 1. Linux does not apply the default action for `SIGTERM` or `SIGINT` to PID 1, so unless your app handles those signals itself, `docker stop` waits out its timeout (10 seconds by default) and then kills the container with `SIGKILL`. PID 1 is also responsible for reaping zombie child processes.
 
-This is the same for every distroless Node.js image. Either:
+Google's distroless Node.js images behave the same way. Either:
 
 - run with an init process: `docker run --init`, `init: true` in Docker Compose, or [`shareProcessNamespace`](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) in Kubernetes; or
 - handle the signals in your app and shut down gracefully:
