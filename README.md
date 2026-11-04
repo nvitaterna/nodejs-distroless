@@ -43,10 +43,15 @@ Because of this, exact-version tags are rebuilt and move to new digests over tim
 
 Every maintenance, LTS and current Node.js release line is published, tagged by:
 
-- full version, e.g. `22.23.4`
-- major.minor, e.g. `22.23` (newest patch of that line)
-- major, e.g. `22` (newest release of that line)
-- `latest` (newest release of the newest line)
+| Tag | Example | Points to |
+|---|---|---|
+| full version | `22.23.4` | that exact release |
+| major.minor | `22.23` | newest patch of that minor |
+| major | `22` | newest release of that line |
+| `lts` | `lts` | newest release of the newest Active LTS line |
+| `latest` | `latest` | newest release of the newest line, which may be a Current (non-LTS) line |
+
+For production, `lts` or a major tag such as `22` is usually the right choice: you get Node.js patches and OS updates without jumping to a new major. The full list of versions and their tags is in [`versions.json`](versions.json).
 
 Images for Node.js lines that have reached end of life stay on Docker Hub but are not rebuilt, so they stop receiving base image updates.
 
@@ -77,6 +82,25 @@ _Replace `index.js` with your app's entry point._
 - The entrypoint is `node`, so `CMD` takes the arguments you would pass to `node`.
 - The only user is `node` (uid 1000), with home directory `/home/node`. There is no root user to switch to, and you do not need a `USER` instruction.
 - The image includes CA certificates and timezone data.
+
+### Stopping cleanly (signals and PID 1)
+
+The image has no init process, so `node` runs as PID 1. Linux does not apply the default action for `SIGTERM` or `SIGINT` to PID 1, so unless your app handles those signals itself, `docker stop` waits out its timeout (10 seconds by default) and then kills the container with `SIGKILL`. PID 1 is also responsible for reaping zombie child processes.
+
+Google's distroless Node.js images behave the same way. Either:
+
+- run with an init process: `docker run --init`, `init: true` in Docker Compose, or [`shareProcessNamespace`](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) in Kubernetes; or
+- handle the signals in your app and shut down gracefully:
+
+  ```js
+  for (const signal of ["SIGTERM", "SIGINT"]) {
+    process.on(signal, () => {
+      server.close(() => process.exit(0));
+    });
+  }
+  ```
+
+Handling the signals yourself is worth doing even with an init process, so in-flight requests can finish before the container exits.
 
 ---
 
@@ -120,6 +144,14 @@ The build downloads Node.js from nodejs.org and verifies its checksum. Set `NODE
 
 - Inspired by [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless)
 - Built with [Canonical Chisel](https://github.com/canonical/chisel) and [chisel-releases](https://github.com/canonical/chisel-releases)
+
+---
+
+## License
+
+The code in this repository (the Dockerfile, workflows and tools) is licensed under the [MIT License](LICENSE).
+
+The published images also contain third-party software under its own licenses: Node.js (license at `/usr/LICENSE` in the image) and Ubuntu packages (copyright files under `/usr/share/doc/`).
 
 ---
 
