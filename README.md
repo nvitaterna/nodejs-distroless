@@ -8,7 +8,12 @@
 
 `nodejs-distroless` provides minimal, production-ready Docker images for running Node.js applications. Each image contains the official Node.js binary and only the runtime libraries it needs, cut from Ubuntu LTS with [Canonical's Chisel](https://github.com/canonical/chisel) and inspired by Google's distroless approach. There is no shell, no package manager and no unnecessary OS files, which keeps the images small and the attack surface low.
 
-Images are published to Docker Hub as [`nvitaterna/nodejs-distroless`](https://hub.docker.com/r/nvitaterna/nodejs-distroless) for `linux/amd64` and `linux/arm64`.
+Images are published for `linux/amd64` and `linux/arm64` to:
+
+- Docker Hub: [`nvitaterna/nodejs-distroless`](https://hub.docker.com/r/nvitaterna/nodejs-distroless)
+- GitHub Container Registry: [`ghcr.io/nvitaterna/nodejs-distroless`](https://github.com/nvitaterna/nodejs-distroless/pkgs/container/nodejs-distroless)
+
+Both carry the same tags and the same image digests. If Docker Hub's pull rate limits get in your way, pull from `ghcr.io` instead.
 
 ---
 
@@ -93,7 +98,7 @@ Everything lives in this repository and runs without manual steps:
 | Chisel base | `Dockerfile` (`base` stage) | Builds Chisel and cuts the runtime rootfs (CA certificates, tzdata, libstdc++, libatomic1) from Ubuntu LTS; adds the `node` user. |
 | Node.js layer | `Dockerfile` (node stages) | Downloads the official Node.js tarball, verifies it against nodejs.org's `SHASUMS256.txt`, and copies `node` onto the base. |
 | Version list | `versions.json`, kept current by `tools/version-info/` | The hourly `get-new-versions` workflow runs the tool and commits any new versions. |
-| Publishing | `.github/workflows/publish.yml` | On every change to `main`: builds the base once per arch, builds and smoke-tests each version on it, then pushes manifest lists. A base change republishes every version; a version list change publishes only the new ones. The last published commit is recorded on the orphan `published` branch. |
+| Publishing | `.github/workflows/publish.yml` | On every change to `main`: builds the base once per arch, builds and smoke-tests each version on it, then pushes manifest lists to Docker Hub and GHCR. A base change republishes every version; a version list change publishes only the new ones. The last published commit is recorded on the orphan `published` branch. |
 | Tarball cache | `.github/actions/node-dist` | Keeps each Node.js tarball on the `node-dist` GitHub release so builds do not depend on nodejs.org being fast. |
 | Vulnerability scans | `.github/workflows/pr-build-and-test.yml`, `.github/workflows/scan-images.yml` | Every PR-built image is scanned with Grype and fails on fixable High/Critical findings. The newest image of each line is rescanned daily and the results go to the repository's Security tab. |
 | Updates | `renovate.json` | Ubuntu LTS, Chisel release, apt packages, GitHub Actions and the tool's npm dependencies. Non-major updates merge automatically once checks pass; majors wait for review. |
