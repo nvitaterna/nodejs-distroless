@@ -85,7 +85,15 @@ Every tag also has a [debug variant](#debugging) with a `-debug` suffix, e.g. `2
 
 For production, `lts` or a major tag such as `22` is usually the right choice: you get Node.js patches and OS updates without jumping to a new major. The full list of versions and their tags is in [`versions.json`](versions.json).
 
-Images for Node.js lines that have reached end of life stay on Docker Hub but are not rebuilt, so they stop receiving base image updates.
+### Support and end of life
+
+Which Node.js lines are published follows the official [Node.js release schedule](https://github.com/nodejs/release#release-schedule) ([schedule.json](https://github.com/nodejs/Release/blob/main/schedule.json)):
+
+- **A line is added** when its first Current release ships, e.g. `26.0.0`. Alpha pre-releases are not published.
+- **While a line is supported** (Current, Active LTS or Maintenance LTS), every new release is published, and every published version of it is rebuilt whenever the Ubuntu base changes.
+- **On its end-of-life date**, the line is dropped from [`versions.json`](versions.json). Its images and tags (including the major tag, e.g. `20`) stay on Docker Hub and GHCR, but are never rebuilt or rescanned again, so they stop receiving OS security updates. `lts` and `latest` will already point to a newer line by then.
+
+Plan to move off a line before its end-of-life date. The dates for every line are on the [Node.js releases page](https://nodejs.org/en/about/previous-releases).
 
 ---
 
@@ -239,7 +247,7 @@ grype sbom:sbom.spdx.json
 - No shell or package manager: you cannot `docker exec` into a container or install packages at runtime (see [Debugging](#debugging)).
 - No `npm` or `npx`: all dependencies must be installed at build time and copied in.
 - Cannot run as root or perform privileged operations.
-- Only maintenance, LTS and current Node.js lines receive updates; see [Tags](#tags).
+- Only maintenance, LTS and current Node.js lines receive updates; see [Support and end of life](#support-and-end-of-life).
 
 ---
 
@@ -289,5 +297,8 @@ The published images also contain third-party software under its own licenses: N
 
 ---
 
-**Contact:**  
-For questions or support, open an issue on the [GitHub repository](https://github.com/nvitaterna/nodejs-distroless).
+## Getting help and contributing
+
+- Questions, bugs and feature requests: [open an issue](https://github.com/nvitaterna/nodejs-distroless/issues/new/choose).
+- Security vulnerabilities: report them privately, see [SECURITY.md](SECURITY.md).
+- Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md).

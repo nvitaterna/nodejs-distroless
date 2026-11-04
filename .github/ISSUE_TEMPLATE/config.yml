@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/nvitaterna/nodejs-distroless/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
+  - name: Node.js bugs
+    url: https://github.com/nodejs/node/issues
+    about: Bugs in Node.js itself (not in how it is packaged here) belong upstream.
