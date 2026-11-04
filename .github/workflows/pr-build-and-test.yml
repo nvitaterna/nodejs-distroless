@@ -110,15 +110,29 @@ jobs:
           context: .
           target: base
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
-          outputs: type=oci,tar=false,dest=${{ runner.temp }}/base-oci
+          outputs: type=oci,tar=false,dest=${{ runner.temp }}/oci/base
           cache-from: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
           cache-to: type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
+
+      # what the debug variant adds (busybox); it shares the base's builder
+      # stage, so this reuses what the previous step just built
+      - name: Build debug tools
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: debug-tools
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          outputs: type=oci,tar=false,dest=${{ runner.temp }}/oci/debug-tools
+          cache-from: |
+            type=gha,scope=base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+            type=gha,scope=debug-tools-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,scope=debug-tools-${{ matrix.platform.os }}-${{ matrix.platform.arch }},mode=max
 
       - name: Upload base
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          path: ${{ runner.temp }}/base-oci
+          path: ${{ runner.temp }}/oci
           if-no-files-found: error
           retention-days: 1
 
@@ -154,15 +168,17 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: base-${{ matrix.platform.os }}-${{ matrix.platform.arch }}
-          path: ${{ runner.temp }}/base-oci
+          path: ${{ runner.temp }}/oci
 
       - name: Resolve base
         id: base
         env:
-          BASE_OCI: ${{ runner.temp }}/base-oci
+          OCI: ${{ runner.temp }}/oci
         run: |
-          digest=$(jq -r '.manifests[0].digest' "$BASE_OCI/index.json")
-          echo "context=base=oci-layout://$BASE_OCI@$digest" >> "$GITHUB_OUTPUT"
+          for name in base debug-tools; do
+            digest=$(jq -r '.manifests[0].digest' "$OCI/$name/index.json")
+            echo "$name=$name=oci-layout://$OCI/$name@$digest" >> "$GITHUB_OUTPUT"
+          done
 
       - name: Login to Docker Hub
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
@@ -180,12 +196,13 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
+          target: release
           load: true
           push: false
           build-args: |
             NODE_VERSION=${{ matrix.version.version }}
             NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
-          build-contexts: ${{ steps.base.outputs.context }}
+          build-contexts: ${{ steps.base.outputs.base }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           tags: |
             nvitaterna/nodejs-distroless:${{ matrix.version.version }}
@@ -208,6 +225,49 @@ jobs:
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
           image: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
+          config: .github/grype/pr.yaml
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+          by-cve: true
+          output-format: table
+          cache-db: true
+
+      - name: Build debug variant
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: debug
+          load: true
+          push: false
+          build-args: |
+            NODE_VERSION=${{ matrix.version.version }}
+            NODE_DIST_URL=${{ steps.node-dist.outputs.url }}
+          build-contexts: |
+            ${{ steps.base.outputs.base }}
+            ${{ steps.base.outputs.debug-tools }}
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          tags: |
+            nvitaterna/nodejs-distroless:${{ matrix.version.version }}-debug
+
+      - name: Test debug variant
+        env:
+          PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          IMAGE: nvitaterna/nodejs-distroless:${{ matrix.version.version }}-debug
+          EXPECTED_NODE_VERSION: ${{ matrix.version.version }}
+        run: |
+          docker run --platform "$PLATFORM" --rm \
+            -v "$PWD/test/check.js:/check.js:ro" \
+            -e EXPECTED_NODE_VERSION \
+            "$IMAGE" /check.js
+          docker run --platform "$PLATFORM" --rm --entrypoint sh \
+            "$IMAGE" -c 'test "$(id -u)" = 1000 && ls /home/node > /dev/null && wget --help 2>&1 | grep -q Usage'
+
+      # busybox has its own dpkg status entry, so this also covers it
+      - name: Scan debug variant for vulnerabilities
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: nvitaterna/nodejs-distroless:${{ matrix.version.version }}-debug
           config: .github/grype/pr.yaml
           fail-build: true
           severity-cutoff: high
