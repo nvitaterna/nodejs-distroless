@@ -212,7 +212,7 @@ jobs:
 
       # the image carries a dpkg status file for its chiselled packages, so
       # grype sees the Ubuntu libraries; fixable High/Critical findings in
-      # them fail the build. Node.js's own CVEs are left to the weekly scan
+      # them fail the build. Node.js's own CVEs are left to the daily scan
       # of the newest image per line (see .github/grype/pr.yaml for why)
       - name: Scan for vulnerabilities
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
