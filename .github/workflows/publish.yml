@@ -377,7 +377,11 @@ jobs:
       packages: write
       id-token: write # keyless signing with cosign
     strategy:
-      max-parallel: 1
+      # one failed push must not cancel the others
+      fail-fast: false
+      # enough to keep a full republish short, few enough not to hammer the
+      # registries and Rekor
+      max-parallel: 8
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
     steps:
