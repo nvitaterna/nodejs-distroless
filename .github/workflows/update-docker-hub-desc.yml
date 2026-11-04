@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - README.md
+  # the short description comes from the GitHub repository description, which
+  # can change without a README change; run this by hand to sync it
+  workflow_dispatch:
 
 # its own group: sharing "production" with the publish workflow meant a
 # README change could cancel a waiting publish run (GitHub keeps only one
