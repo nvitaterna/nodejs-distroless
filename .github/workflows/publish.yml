@@ -37,6 +37,10 @@ on:
 concurrency: production
 
 env:
+  # published to both; the build pushes each arch to both by digest and the
+  # push job tags the manifest list in both
+  DOCKERHUB_IMAGE: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/${{ vars.REGISTRY_IMAGE }}
   TEST_TAG: nvitaterna/${{ vars.REGISTRY_IMAGE }}:test
 
 jobs:
@@ -128,6 +132,13 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
@@ -167,6 +178,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     strategy:
       # one broken version must not stop the others from being published
       fail-fast: false
@@ -206,7 +218,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          images: nvitaterna/${{ vars.REGISTRY_IMAGE }}
+          images: ${{ env.DOCKERHUB_IMAGE }}
           labels: |
             NODEJS_VERSION=${{ matrix.version.version }}
 
@@ -215,6 +227,13 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
@@ -257,8 +276,7 @@ jobs:
           build-contexts: ${{ steps.base.outputs.context }}
           platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: nvitaterna/${{ vars.REGISTRY_IMAGE }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,"name=${{ env.DOCKERHUB_IMAGE }},${{ env.GHCR_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
           provenance: mode=max
           sbom: true
 
@@ -286,6 +304,8 @@ jobs:
       - configure
       - build
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     strategy:
       max-parallel: 1
       matrix:
@@ -319,13 +339,26 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Login to GitHub Container Registry
+        if: steps.digests.outputs.skip != 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # the per-arch images were pushed to both registries by digest, so one
+      # manifest list built from the Docker Hub copies is tagged in both
       - name: Create manifest list and push
         if: steps.digests.outputs.skip != 'true'
         working-directory: ${{ runner.temp }}/digests
+        env:
+          TAGS: ${{ toJSON(matrix.version.tags) }}
         run: |
-          # shellcheck disable=SC2046 # word splitting is intended: one -t per tag, one ref per digest
-          docker buildx imagetools create $(jq -cr '. | map("-t nvitaterna/${{ vars.REGISTRY_IMAGE }}:" + .) | join(" ")' <<< '${{ toJSON(matrix.version.tags) }}') \
-            $(printf 'nvitaterna/${{ vars.REGISTRY_IMAGE }}@sha256:%s ' *)
+          mapfile -t tag_args < <(jq -r --arg hub "$DOCKERHUB_IMAGE" --arg ghcr "$GHCR_IMAGE" \
+            '.[] | ("-t", "\($hub):\(.)", "-t", "\($ghcr):\(.)")' <<< "$TAGS")
+          mapfile -t sources < <(printf "$DOCKERHUB_IMAGE@sha256:%s\n" *)
+          docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
 
   mark-published:
     name: Mark commit as published
