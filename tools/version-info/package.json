@@ -17,7 +17,7 @@
     "url": "git+https://github.com/nvitaterna/nodejs-distroless.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/nvitaterna/nodejs-distroless/issues"
   },
