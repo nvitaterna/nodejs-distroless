@@ -375,6 +375,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
+      id-token: write # keyless signing with cosign
     strategy:
       max-parallel: 1
       matrix:
@@ -420,21 +421,62 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install cosign
+        if: steps.digests.outputs.skip != 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
       # the per-arch images were pushed to both registries by digest, so one
-      # manifest list built from the Docker Hub copies is tagged in both. The
-      # debug variant gets every tag with a -debug suffix (22-debug, latest-debug)
-      - name: Create manifest lists and push
+      # manifest list built from the Docker Hub copies is tagged in both, with
+      # the same digest. The debug variant gets every tag with a -debug suffix
+      # (22-debug, latest-debug). The manifest list carries OCI annotations,
+      # which is where registries (GHCR in particular) look for a multi-arch
+      # image's description and source. Each manifest list and the images in
+      # it are then signed with cosign, keyless: the signature is tied to this
+      # workflow's identity through GitHub's OIDC token and logged in Rekor
+      - name: Create manifest lists, push and sign
         if: steps.digests.outputs.skip != 'true'
         env:
+          VERSION: ${{ matrix.version.version }}
           TAGS: ${{ toJSON(matrix.version.tags) }}
           DIGESTS: ${{ runner.temp }}/digests
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
+          created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           for variant in release debug; do
-            suffix=$([[ "$variant" == debug ]] && echo -debug || true)
+            suffix=""
+            description="Distroless Node.js $VERSION, built from Ubuntu LTS with Canonical's Chisel"
+            if [[ "$variant" == debug ]]; then
+              suffix=-debug
+              description="$description, with a BusyBox shell for debugging"
+            fi
+            annotations=(
+              "org.opencontainers.image.title=nodejs-distroless"
+              "org.opencontainers.image.description=$description"
+              "org.opencontainers.image.version=$VERSION$suffix"
+              "org.opencontainers.image.source=$REPO_URL"
+              "org.opencontainers.image.url=$REPO_URL"
+              "org.opencontainers.image.documentation=$REPO_URL#readme"
+              "org.opencontainers.image.revision=$GITHUB_SHA"
+              "org.opencontainers.image.created=$created"
+              "org.opencontainers.image.licenses=MIT"
+            )
+            annotation_args=()
+            for annotation in "${annotations[@]}"; do
+              annotation_args+=(--annotation "index:$annotation")
+            done
             mapfile -t tag_args < <(jq -r --arg hub "$DOCKERHUB_IMAGE" --arg ghcr "$GHCR_IMAGE" --arg suffix "$suffix" \
               '.[] | ("-t", "\($hub):\(.)\($suffix)", "-t", "\($ghcr):\(.)\($suffix)")' <<< "$TAGS")
             mapfile -t sources < <(cd "$DIGESTS/$variant" && printf "$DOCKERHUB_IMAGE@sha256:%s\n" *)
-            docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+            docker buildx imagetools create "${annotation_args[@]}" "${tag_args[@]}" "${sources[@]}"
+
+            digest=$(docker buildx imagetools inspect "$DOCKERHUB_IMAGE:$VERSION$suffix" --format '{{.Manifest.Digest}}')
+            ghcr_digest=$(docker buildx imagetools inspect "$GHCR_IMAGE:$VERSION$suffix" --format '{{.Manifest.Digest}}')
+            if [[ "$digest" != "$ghcr_digest" ]]; then
+              echo "::error::v$VERSION$suffix: Docker Hub ($digest) and GHCR ($ghcr_digest) digests differ"
+              exit 1
+            fi
+            cosign sign --yes --recursive "$DOCKERHUB_IMAGE@$digest" "$GHCR_IMAGE@$digest"
+            echo "v$VERSION$suffix: $digest" >> "$GITHUB_STEP_SUMMARY"
           done
 
   mark-published:
