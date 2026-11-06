@@ -1,0 +1,57 @@
+name: Track pulls
+
+# Docker Hub and GHCR only show a running total of pulls, with no history, so
+# this records both totals every hour as a line in pulls.csv on the orphan
+# `stats` branch. scripts/pull-stats.sh turns it into pulls per day.
+# The totals include this repository's own pulls: the daily scan pulls a few
+# images from Docker Hub, and publish runs read manifests while tagging and
+# signing (a few hundred on a full republish)
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+concurrency: stats
+
+jobs:
+  record:
+    name: Record pull counts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Append the current totals to pulls.csv
+        env:
+          DOCKERHUB_API: https://hub.docker.com/v2/repositories/nvitaterna/${{ vars.REGISTRY_IMAGE }}/
+          GHCR_PAGE: ${{ github.server_url }}/${{ github.repository }}/pkgs/container/${{ vars.REGISTRY_IMAGE }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          dockerhub=$(curl -fsS --retry 3 "$DOCKERHUB_API" | jq -r '.pull_count // empty' || true)
+          # GHCR has no API for download counts; the package page shows the
+          # exact total in the title of the "Total downloads" figure
+          ghcr=$(curl -fsSL --retry 3 "$GHCR_PAGE" | grep -A1 'Total downloads' | grep -oE 'title="[0-9]+"' | grep -oE '[0-9]+' || true)
+          if [[ -z "$dockerhub" && -z "$ghcr" ]]; then
+            echo "::error::Could not read either pull count"
+            exit 1
+          fi
+          [[ -z "$dockerhub" ]] && echo "::warning::Could not read the Docker Hub pull count"
+          [[ -z "$ghcr" ]] && echo "::warning::Could not read the GHCR download count"
+          echo "$now dockerhub=$dockerhub ghcr=$ghcr"
+
+          if git fetch --depth=1 origin stats; then
+            git switch -C stats FETCH_HEAD
+          else
+            git switch --orphan stats
+            echo "time,dockerhub,ghcr" > pulls.csv
+          fi
+          echo "$now,$dockerhub,$ghcr" >> pulls.csv
+          git add pulls.csv
+          git commit -q -m "pulls $now"
+          git push origin stats
