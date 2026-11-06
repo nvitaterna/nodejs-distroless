@@ -163,18 +163,31 @@ The image has no init process, so `node` runs as PID 1. Linux does not apply the
 
 Google's distroless Node.js images behave the same way. Either:
 
-- run with an init process: `docker run --init`, `init: true` in Docker Compose, or [`shareProcessNamespace`](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) in Kubernetes; or
+- run with an init process: `docker run --init` or `init: true` in Docker Compose; or
 - handle the signals in your app and shut down gracefully:
 
   ```js
-  for (const signal of ["SIGTERM", "SIGINT"]) {
-    process.on(signal, () => {
-      server.close(() => process.exit(0));
-    });
+  function shutdown() {
+    // stop accepting connections; exit once in-flight requests finish
+    server.close(() => process.exit(0));
+    // don't let a slow request outlive the grace period and get SIGKILLed mid-write
+    setTimeout(() => process.exit(1), 8000).unref();
   }
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
   ```
 
+  Keep the timeout below the stop timeout: 10 seconds for `docker stop`, `terminationGracePeriodSeconds` (30 by default) in Kubernetes.
+
+Kubernetes has no equivalent of `--init`, so in a pod, handling the signals in the app is the usual answer. [`shareProcessNamespace: true`](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/) makes the pod's pause container PID 1 instead, but it also lets every container in the pod see the others' processes and, through `/proc`, their filesystems.
+
 Handling the signals yourself is worth doing even with an init process, so in-flight requests can finish before the container exits.
+
+To check, time a stop: it should take well under the timeout.
+
+```sh
+docker run -d --name app my-image && sleep 2 && time docker stop app
+```
 
 ---
 
