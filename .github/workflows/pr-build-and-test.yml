@@ -217,6 +217,17 @@ jobs:
             -e EXPECTED_NODE_VERSION \
             "$IMAGE" /check.js
 
+      # sharp and better-sqlite3 installed by npm ci in node:<version> and
+      # loaded in the image, as in the README's multi-stage build; catches a
+      # shared library, libc or architecture mismatch with prebuilt addons.
+      # Only the release variant: debug is the same image plus busybox
+      - name: Test native addons
+        env:
+          PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          IMAGE: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
+          VERSION: ${{ matrix.version.version }}
+        run: test/native-addons/run.sh "$IMAGE" "$VERSION" "$PLATFORM"
+
       # the image carries a dpkg status file for its chiselled packages, so
       # grype sees the Ubuntu libraries; fixable High/Critical findings in
       # them fail the build. Node.js's own CVEs are left to the daily scan

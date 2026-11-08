@@ -1,0 +1,9 @@
+{
+  "name": "native-addons-check",
+  "private": true,
+  "description": "Native addons installed in node:<version> and loaded in the distroless image, see run.sh",
+  "dependencies": {
+    "better-sqlite3": "13.0.3",
+    "sharp": "0.35.5"
+  }
+}
