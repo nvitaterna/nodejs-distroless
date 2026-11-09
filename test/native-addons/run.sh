@@ -29,17 +29,22 @@ platform_args=()
 volume=$(docker volume create)
 trap 'docker volume rm "$volume" > /dev/null' EXIT
 
-# docker run with a time limit; killing the client leaves the container
-# running, so it is named and removed explicitly
+# docker run with a time limit. The container runs detached and the limit
+# is put on docker wait: an attached docker run forwards timeout's SIGTERM
+# to the container instead of exiting, so a hung addon would never stop.
 run() {
-  local limit=$1 name="native-addons-$$-$RANDOM" status=0
+  local limit=$1 id code
   shift
-  timeout "$limit" docker run --rm --name "$name" "$@" || status=$?
-  if (( status == 124 )); then
+  id=$(docker run -d "$@")
+  if ! code=$(timeout "$limit" docker wait "$id"); then
+    docker logs "$id" 2>&1
     echo "timed out after $limit"
-    docker rm -f "$name" > /dev/null 2>&1 || true
+    docker rm -f "$id" > /dev/null
+    return 124
   fi
-  return "$status"
+  docker logs "$id" 2>&1
+  docker rm -f "$id" > /dev/null
+  return "$code"
 }
 
 run 15m "${platform_args[@]}" \
