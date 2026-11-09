@@ -48,13 +48,14 @@
       "allowedVersions": "/^\\d*[02468]\\.04$/"
     },
     {
-      "description": "Automerge non-major updates once all PR checks have passed; majors stay open for review",
+      "description": "Automerge non-major updates and lock file maintenance once all PR checks have passed; majors stay open for review",
       "matchUpdateTypes": [
         "minor",
         "patch",
         "pin",
         "pinDigest",
-        "digest"
+        "digest",
+        "lockFileMaintenance"
       ],
       "automerge": true
     },
