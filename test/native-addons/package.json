@@ -3,7 +3,7 @@
   "private": true,
   "description": "Native addons installed in node:<version> and loaded in the distroless image, see run.sh",
   "dependencies": {
-    "better-sqlite3": "13.0.3",
+    "bcrypt": "6.0.0",
     "sharp": "0.35.5"
   }
 }

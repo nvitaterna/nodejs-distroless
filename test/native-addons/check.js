@@ -1,4 +1,4 @@
-// usage: node check.js <sharp|better-sqlite3>
+// usage: node check.js <sharp|bcrypt>
 // run inside the distroless image with node_modules installed by node:<version>,
 // so a missing shared library, a libc mismatch or a wrong architecture fails
 // here instead of in a user's deployment. One addon per process: a crash in
@@ -26,22 +26,21 @@ const addons = {
       libvips: new RegExp(`/sharp-libvips-linux-${arch}/lib/libvips-cpp\\.so`),
     },
   },
-  "better-sqlite3": {
+  // a C++ addon on N-API, so one prebuilt binary serves every Node.js
+  // version; links libstdc++, libgcc_s, libm and libc
+  bcrypt: {
     async run() {
-      const Database = require("better-sqlite3");
-      const db = new Database(":memory:");
-      db.exec("CREATE TABLE t (n INTEGER)");
-      const insert = db.prepare("INSERT INTO t VALUES (?)");
-      db.transaction(() => [1, 2, 3].forEach((n) => insert.run(n)))();
-      assert.strictEqual(db.prepare("SELECT sum(n) AS s FROM t").get().s, 6);
-      const { v } = db.prepare("SELECT sqlite_version() AS v").get();
-      db.close();
-      return { "better-sqlite3": require("better-sqlite3/package.json").version, sqlite: v };
+      const bcrypt = require("bcrypt");
+      const hash = await bcrypt.hash("distroless", 4);
+      assert.ok(await bcrypt.compare("distroless", hash));
+      assert.ok(!(await bcrypt.compare("distrofull", hash)));
+      return { bcrypt: require("bcrypt/package.json").version };
     },
     native: {
-      binding: new RegExp(`/better-sqlite3/(prebuilds/linux-${arch}|build/Release/better_sqlite3)\\.node$`),
+      binding: new RegExp(`/bcrypt/(prebuilds/linux-${arch}/bcrypt\\.glibc|build/Release/bcrypt_lib)\\.node$`),
     },
   },
+
 };
 
 (async () => {
