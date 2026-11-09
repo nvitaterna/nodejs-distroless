@@ -279,7 +279,7 @@ Everything lives in this repository and runs without manual steps:
 | Vulnerability scans | `.github/workflows/pr-build-and-test.yml`, `.github/workflows/scan-images.yml` | Every PR-built image is scanned with Grype and fails on fixable High/Critical findings. The newest image of each line is rescanned daily and the results go to the repository's Security tab. |
 | Updates | `renovate.json` | Ubuntu LTS, Chisel release, apt packages, GitHub Actions and the tool's npm dependencies. Non-major updates merge automatically once checks pass; majors wait for review. |
 
-Pull requests build the oldest and newest version of each major line on both architectures, in both variants, and run `test/check.js` inside the image.
+Pull requests build the oldest and newest version of each major line on both architectures, in both variants, and run `test/check.js` inside the image. They also install [sharp](https://sharp.pixelplumbing.com/) and [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) with `npm ci` in the matching `node:<version>` image and load them in the distroless one (`test/native-addons/`), checking that the native binaries, not a WebAssembly fallback, load and work, to catch missing shared libraries or a libc or architecture mismatch.
 
 ### Building locally
 
