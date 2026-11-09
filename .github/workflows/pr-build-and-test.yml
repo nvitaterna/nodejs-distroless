@@ -223,8 +223,10 @@ jobs:
       # loaded in the image, as in the README's multi-stage build; catches a
       # shared library, libc or architecture mismatch with prebuilt addons.
       # Only the release variant: debug is the same image plus busybox
+      # the time limit stops a hung addon from holding the job for hours;
+      # a passing run takes a minute or two
       - name: Test native addons
-        timeout-minutes: 45
+        timeout-minutes: 15
         env:
           PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           IMAGE: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
