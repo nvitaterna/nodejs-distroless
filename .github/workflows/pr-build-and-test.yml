@@ -222,6 +222,7 @@ jobs:
       # shared library, libc or architecture mismatch with prebuilt addons.
       # Only the release variant: debug is the same image plus busybox
       - name: Test native addons
+        timeout-minutes: 45
         env:
           PLATFORM: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
           IMAGE: nvitaterna/nodejs-distroless:${{ matrix.version.version }}
