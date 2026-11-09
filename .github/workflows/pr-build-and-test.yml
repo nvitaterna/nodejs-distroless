@@ -76,14 +76,18 @@ jobs:
     name: Build base on ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     needs: configure
     if: needs.configure.outputs.skip != 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
+        # each arch builds on its own hardware: under QEMU builds are slow
+        # and a crashing process can hang instead of exiting
         platform:
           - os: linux
             arch: arm64
+            runner: ubuntu-24.04-arm
           - os: linux
             arch: amd64
+            runner: ubuntu-latest
     steps:
       - name: Check out the repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -93,9 +97,6 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
@@ -142,17 +143,21 @@ jobs:
       - configure
       - base
     if: needs.configure.outputs.skip != 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform.runner }}
     permissions:
       contents: write
     strategy:
       matrix:
         version: ${{ fromJson(needs.configure.outputs.matrix) }}
+        # each arch builds on its own hardware: under QEMU builds are slow
+        # and a crashing process can hang instead of exiting
         platform:
           - os: linux
             arch: arm64
+            runner: ubuntu-24.04-arm
           - os: linux
             arch: amd64
+            runner: ubuntu-latest
     steps:
       - name: Check out the repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -185,9 +190,6 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
