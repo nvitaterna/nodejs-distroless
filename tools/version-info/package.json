@@ -34,7 +34,7 @@
     "@vitest/coverage-v8": "5.1.0",
     "eslint": "10.14.0",
     "eslint-config-prettier": "10.1.8",
-    "msw": "3.0.3",
+    "msw": "3.0.4",
     "prettier": "3.9.10",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
