@@ -23,9 +23,20 @@ platform_args=()
 volume=$(docker volume create)
 trap 'docker volume rm "$volume" > /dev/null' EXIT
 
+# the official image for a new Node.js release lands on Docker Hub hours to
+# days after the release, while the PR adding the version here opens right
+# away; until then, install with the newest official image of the same major.
+# The addons are N-API prebuilts, so the builder's exact version doesn't matter
+builder="node:$version"
+if ! docker pull -q "${platform_args[@]}" "$builder" > /dev/null; then
+  builder="node:${version%%.*}"
+  echo "::warning::node:$version is not on Docker Hub yet, installing addons with $builder"
+  docker pull -q "${platform_args[@]}" "$builder" > /dev/null
+fi
+
 docker run --rm "${platform_args[@]}" \
   -v "$dir:/src:ro" -v "$volume:/app" -w /app -e NPM_CONFIG_UPDATE_NOTIFIER=false \
-  "node:$version" \
+  "$builder" \
   sh -c 'cp /src/package.json /src/package-lock.json /src/check.js . && npm ci --omit=dev --no-audit --no-fund --loglevel=error'
 
 failed=()
