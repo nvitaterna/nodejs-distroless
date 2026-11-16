@@ -1,4 +1,4 @@
-ARG UBUNTU_TAG="26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c"
+ARG UBUNTU_TAG="26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96"
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -19,9 +19,9 @@ ARG GOLANG_amd64_VERSION="2:1.26~1"
 ARG GOLANG_arm64_VERSION="2:1.26~1"
 
 # renovate-apt-docker: arch=amd64 versioning=loose depName=ca-certificates
-ARG CACERTIFICATES_amd64_VERSION="20260816ubuntu0.26.04.1"
+ARG CACERTIFICATES_amd64_VERSION="20260816ubuntu0.26.04.2"
 # renovate-apt-docker: arch=arm64 versioning=loose depName=ca-certificates
-ARG CACERTIFICATES_arm64_VERSION="20260816ubuntu0.26.04.1"
+ARG CACERTIFICATES_arm64_VERSION="20260816ubuntu0.26.04.2"
 
 # renovate-apt-docker: arch=amd64 versioning=loose depName=file
 ARG FILE_amd64_VERSION="1:5.46-5build2"
