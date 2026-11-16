@@ -19,9 +19,9 @@ ARG GOLANG_amd64_VERSION="2:1.26~1"
 ARG GOLANG_arm64_VERSION="2:1.26~1"
 
 # renovate-apt-docker: arch=amd64 versioning=loose depName=ca-certificates
-ARG CACERTIFICATES_amd64_VERSION="20260816ubuntu0.26.04.1"
+ARG CACERTIFICATES_amd64_VERSION="20260816ubuntu0.26.04.2"
 # renovate-apt-docker: arch=arm64 versioning=loose depName=ca-certificates
-ARG CACERTIFICATES_arm64_VERSION="20260816ubuntu0.26.04.1"
+ARG CACERTIFICATES_arm64_VERSION="20260816ubuntu0.26.04.2"
 
 # renovate-apt-docker: arch=amd64 versioning=loose depName=file
 ARG FILE_amd64_VERSION="1:5.46-5build2"
