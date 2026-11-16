@@ -12,7 +12,7 @@
       "matchStrings": [
         "#\\s*renovate-apt-docker:\\s*?(arch=(?<arch>.*?))?\\s*?(versioning=(?<versioning>.*?))?\\s*depName=(?<depName>.*?)?\\sARG .*?_VERSION=\"(?<currentValue>.*)\""
       ],
-      "registryUrlTemplate": "{{#if (equals arch 'amd64')}}https://archive.ubuntu.com/ubuntu{{else}}https://ports.ubuntu.com/ubuntu-ports{{/if}}?suite=resolute&components=universe,multiverse,main,restricted&binaryArch={{arch}}",
+      "depTypeTemplate": "apt-{{arch}}",
       "datasourceTemplate": "deb",
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     },
@@ -46,6 +46,34 @@
         "canonical-chisel-releases"
       ],
       "allowedVersions": "/^\\d*[02468]\\.04$/"
+    },
+    {
+      "description": "Look up amd64 apt pins across the release, -updates and -security suites, so post-release package updates are tracked",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchDepTypes": [
+        "apt-amd64"
+      ],
+      "registryUrls": [
+        "https://archive.ubuntu.com/ubuntu?suite=resolute&components=universe,multiverse,main,restricted&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=resolute-updates&components=universe,multiverse,main,restricted&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=resolute-security&components=universe,multiverse,main,restricted&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "Look up arm64 apt pins across the release, -updates and -security suites, so post-release package updates are tracked",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchDepTypes": [
+        "apt-arm64"
+      ],
+      "registryUrls": [
+        "https://ports.ubuntu.com/ubuntu-ports?suite=resolute&components=universe,multiverse,main,restricted&binaryArch=arm64",
+        "https://ports.ubuntu.com/ubuntu-ports?suite=resolute-updates&components=universe,multiverse,main,restricted&binaryArch=arm64",
+        "https://ports.ubuntu.com/ubuntu-ports?suite=resolute-security&components=universe,multiverse,main,restricted&binaryArch=arm64"
+      ]
     },
     {
       "description": "Automerge non-major updates and lock file maintenance once all PR checks have passed; majors stay open for review",
