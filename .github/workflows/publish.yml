@@ -475,9 +475,20 @@ jobs:
             mapfile -t sources < <(cd "$DIGESTS/$variant" && printf "$DOCKERHUB_IMAGE@sha256:%s\n" *)
             docker buildx imagetools create "${annotation_args[@]}" "${tag_args[@]}" "${sources[@]}"
 
-            digest=$(docker buildx imagetools inspect "$DOCKERHUB_IMAGE:$VERSION$suffix" --format '{{.Manifest.Digest}}')
-            ghcr_digest=$(docker buildx imagetools inspect "$GHCR_IMAGE:$VERSION$suffix" --format '{{.Manifest.Digest}}')
-            if [[ "$digest" != "$ghcr_digest" ]]; then
+            # registries can serve a stale tag (or none) for a few seconds after
+            # a push, so re-read both until they agree before giving up
+            for attempt in 1 2 3 4 5 6; do
+              digest=$(docker buildx imagetools inspect "$DOCKERHUB_IMAGE:$VERSION$suffix" --format '{{.Manifest.Digest}}' || true)
+              ghcr_digest=$(docker buildx imagetools inspect "$GHCR_IMAGE:$VERSION$suffix" --format '{{.Manifest.Digest}}' || true)
+              if [[ -n "$digest" && "$digest" == "$ghcr_digest" ]]; then
+                break
+              fi
+              if (( attempt < 6 )); then
+                echo "v$VERSION$suffix: digests not consistent yet (Docker Hub: ${digest:-none}, GHCR: ${ghcr_digest:-none}), retrying in 5s"
+                sleep 5
+              fi
+            done
+            if [[ -z "$digest" || "$digest" != "$ghcr_digest" ]]; then
               echo "::error::v$VERSION$suffix: Docker Hub ($digest) and GHCR ($ghcr_digest) digests differ"
               exit 1
             fi
